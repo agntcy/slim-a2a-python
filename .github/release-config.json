@@ -2,7 +2,7 @@
   "bump-patch-for-minor-pre-major": true,
   "separate-pull-requests": true,
   "sequential-calls": true,
-  "include-component-in-tag": true,
+  "include-component-in-tag": false,
   "skip-github-release": false,
   "signoff": "Agntcy Build Bot <build@agntcy.io>",
   "bump-minor-pre-major": true,
