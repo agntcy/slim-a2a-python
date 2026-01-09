@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/agntcy/slim-a2a-python/compare/v0.2.2...v0.2.3) (2026-01-09)
+
+
+### Features
+
+* Migrate slima2a to its own repo ([#1](https://github.com/agntcy/slim-a2a-python/issues/1)) ([29bf1ab](https://github.com/agntcy/slim-a2a-python/commit/29bf1ab0868c00ba3f06462011021b07a0d30405))
+
 ## [0.2.2](https://github.com/agntcy/slim/compare/slima2a-v0.2.1...slima2a-v0.2.2) (2025-12-11)
 
 
