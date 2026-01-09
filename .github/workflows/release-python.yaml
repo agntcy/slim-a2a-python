@@ -15,10 +15,11 @@ concurrency:
 
 jobs:
   build-wheels:
-    name: Build slim mcp
+    name: Build slima2a
     uses: ./.github/workflows/reusable-python-build-and-test.yaml
     with:
-      working-directory: ./data-plane/python/integrations
+      package: slima2a
+      working-directory: .
 
   pypi-publish:
     name: Upload release to PyPI
