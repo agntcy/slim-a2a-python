@@ -8,7 +8,7 @@ logging.getLogger("asyncio").setLevel(logging.ERROR)
 
 # ruff: noqa: E402
 import httpx
-import slimrpc
+import slim_bindings
 from a2a.client import (
     Client,
     ClientFactory,
@@ -79,24 +79,44 @@ async def main() -> None:
 
     httpx_client = httpx.AsyncClient()
 
-    slim_local_app = await slimrpc.common.create_local_app(
-        slimrpc.SLIMAppConfig(
-            identity="agntcy/demo/client",
-            slim_client_config={
-                "endpoint": "http://localhost:46357",
-                "tls": {
-                    "insecure": True,
-                },
-            },
-            shared_secret="secret",
-        )
+    # Set the event loop for slim_bindings to handle callbacks from Rust threads
+    slim_bindings.slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
+
+    # Initialize slim_bindings service
+    tracing_config = slim_bindings.new_tracing_config()
+    runtime_config = slim_bindings.new_runtime_config()
+    service_config = slim_bindings.new_service_config()
+
+    tracing_config.log_level = "info"
+
+    slim_bindings.initialize_with_configs(
+        tracing_config=tracing_config,
+        runtime_config=runtime_config,
+        service_config=[service_config],
     )
+
+    service = slim_bindings.get_global_service()
+
+    # Create local name
+    local_name = slim_bindings.Name("agntcy", "demo", "client")
+
+    # Connect to SLIM
+    client_config_slim = slim_bindings.new_insecure_client_config(
+        "http://localhost:46357"
+    )
+    conn_id = await service.connect_async(client_config_slim)
+
+    # Create app with shared secret
+    slim_local_app = service.create_app_with_secret(local_name, "secret")
+
+    # Subscribe to local name
+    await slim_local_app.subscribe_async(local_name, conn_id)
 
     client_config = ClientConfig(
         supported_transports=["JSONRPC", "slimrpc"],
         streaming=True,
         httpx_client=httpx_client,
-        slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app),
+        slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
     )
     client_factory = ClientFactory(client_config)
 

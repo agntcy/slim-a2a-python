@@ -9,7 +9,7 @@ from a2a.types import (
 from a2a.utils import new_text_artifact
 from typing_extensions import override
 
-from examples.travel_planner_agent.agent import TravelPlannerAgent
+from .agent import TravelPlannerAgent
 
 
 class TravelPlannerAgentExecutor(AgentExecutor):

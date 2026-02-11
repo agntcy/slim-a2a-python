@@ -2,7 +2,7 @@
 version: v2
 inputs:
   - git_repo: https://github.com/a2aproject/A2A.git
-    ref: main
+    ref: v0.3.0
     subdir: specification/grpc
 managed:
   enabled: true
@@ -11,7 +11,7 @@ plugins:
   # Generates _pb2_slimrpc.py files
 
   # TODO: this should be downloaded from a released plugin version
-  - local: ../../../target/release/protoc-slimrpc-plugin
+  - local: ../data-plane/target/aarch64-apple-darwin/release/protoc-gen-slimrpc-python
     out: slima2a/types
     opt:
       - 'types_import=from a2a.grpc import a2a_pb2 as a2a__pb2'

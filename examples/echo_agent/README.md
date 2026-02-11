@@ -21,5 +21,5 @@ uv run examples/echo_agent/server.py
 cd $(git rev-parse --show-toplevel)/data-plane/python/integrations/slima2a
 ```
 ```shell
-uv run examples/echo_agent/client.py --text "hi, this is a text message"
+uv run python -m examples.echo_agent.client --text "hi, this is a text message"
 ```

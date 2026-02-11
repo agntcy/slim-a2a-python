@@ -5,7 +5,7 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks.task_updater import TaskUpdater
 from a2a.types import Message, Part, Role, TextPart
 
-from examples.echo_agent.echo_agent import EchoAgent
+from .echo_agent import EchoAgent
 
 
 class EchoAgentExecutor(AgentExecutor):
