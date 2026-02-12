@@ -1219,33 +1219,17 @@ wheels = [
 
 [[package]]
 name = "slim-bindings"
-source = { editable = "../data-plane/bindings/python" }
-
-[package.metadata]
-requires-dist = [
-    { name = "prompt-toolkit", marker = "extra == 'examples'", specifier = ">=3.0.52" },
-    { name = "pydantic", marker = "extra == 'examples'", specifier = ">=2.0.0" },
-    { name = "pydantic-settings", marker = "extra == 'examples'", specifier = ">=2.0.0" },
-    { name = "pyyaml", marker = "extra == 'examples'", specifier = ">=6.0.3" },
-    { name = "tomli", marker = "extra == 'examples'", specifier = ">=2.4.0" },
-]
-provides-extras = ["examples"]
-
-[package.metadata.requires-dev]
-building = [
-    { name = "maturin", specifier = "~=1.11" },
-    { name = "maturin", extras = ["patchelf"], marker = "sys_platform == 'linux'", specifier = ">=1.8.2" },
-    { name = "uniffi-bindgen", specifier = "==0.28.3" },
-]
-linting = [
-    { name = "griffe", specifier = ">=1.5.5" },
-    { name = "mypy", specifier = ">=1.14.1" },
-    { name = "pyright", specifier = ">=1.1.0" },
-    { name = "ruff", specifier = ">=0.9.3" },
-]
-testing = [
-    { name = "pytest", specifier = ">=7.4.0" },
-    { name = "pytest-asyncio", specifier = ">=0.21.0" },
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/06/35/22a2bb66a3fb6913be17574c8f6dc12b2c276c7a6915a0b3370c78b27209/slim_bindings-1.1.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:22466d4df1e757a1836b230db59d08f33e41972a6dd2bee18a8fb271003a0ee6", size = 14369373, upload-time = "2026-02-12T16:25:20.833Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/46/5630127218e9f21eebb690690926e48d1f8aa8ade66a270fff25fdea790e/slim_bindings-1.1.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:8c35b5b56d3d5f5b531f1017ef311434db293fc84e4c911627e70d1c06bd3adc", size = 14080152, upload-time = "2026-02-12T16:25:28.757Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/47/05d3e74634a1e330e1ad99ae3286b8e2fe99cc9bf6d22738ca8de40766d6/slim_bindings-1.1.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:1c061df67ae51cb5e8f225004123b0c64b66520df448c3939c3a7aaa31c1e89f", size = 12655186, upload-time = "2026-02-12T16:25:31.058Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/72/8cb61b9571867331f17463c9a7be3de519e0e6295f818ed6cf9657c5a56f/slim_bindings-1.1.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:fe738b8fa80c2246638bd7d9136a3d401e72e5e9205ff21d01511bb2b501ecf2", size = 13126481, upload-time = "2026-02-12T16:25:33.598Z" },
+    { url = "https://files.pythonhosted.org/packages/34/cc/dde4efccd646f6e9dd1ce8bc95a51dd1eb5709318c36f7f62cce6b075535/slim_bindings-1.1.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:315a045dce4b1e79022edb1de7519227aec913cbc3f4cdb6ccd32894d55114ea", size = 12652554, upload-time = "2026-02-12T16:25:36.566Z" },
+    { url = "https://files.pythonhosted.org/packages/93/e6/a10522130a200932898660435634f96ff7c5dc0dcb8355e08d123100f1c6/slim_bindings-1.1.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:8c5ab6b5fc950d5f3f9d0d0a0fe9cbafd698562c44cabfc1dc57ad43efc8998e", size = 13124012, upload-time = "2026-02-12T16:25:38.715Z" },
+    { url = "https://files.pythonhosted.org/packages/58/eb/95311273d7c019e3a4adae7fe2b0dab177482aa2c7c44c6632b09499d6a1/slim_bindings-1.1.0-py3-none-win_amd64.whl", hash = "sha256:102826053bf775bd4109fb771c1b5387bc142f315d0bdaba9d1de4dc8331686f", size = 11909296, upload-time = "2026-02-12T16:25:41.224Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/15/c052f72407ee925163826548d22b09e4256f335e485d519f9a0167c0e217/slim_bindings-1.1.0-py3-none-win_arm64.whl", hash = "sha256:f11638fe0786729eb3fbb9bb0273029751b6fd1eae03e7370d70a913c8933972", size = 11142795, upload-time = "2026-02-12T16:25:43.678Z" },
 ]
 
 [[package]]
@@ -1276,7 +1260,7 @@ testing = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["telemetry"], specifier = "==0.3.20" },
-    { name = "slim-bindings", editable = "../data-plane/bindings/python" },
+    { name = "slim-bindings", specifier = "~=1.0" },
 ]
 
 [package.metadata.requires-dev]

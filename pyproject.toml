@@ -41,9 +41,6 @@ examples = [
 [tool.uv]
 default-groups = ["linting", "testing", "examples"]
 
-[tool.uv.sources]
-slim-bindings = { path = "../data-plane/bindings/python", editable = true }
-
 [tool.ruff.format]
 exclude = ["*_pb2.py", "*_pb2.pyi", "*_pb2_slimrpc.py"]
 

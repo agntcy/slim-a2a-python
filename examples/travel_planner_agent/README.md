@@ -11,18 +11,21 @@ This is the Travel Planner Example from the A2A repo, modified to use SLIM A2A
    ```
 
 2. Start SLIM
-  ```bash
-  cd $(git rev-parse --show-toplevel)/data-plane/testing
-  task run:slim
-  ```
+3. 
+Download the slimctl version for your system from the [release page.](https://github.com/agntcy/slim/releases/tag/slimctl-v1.0.0)
+
+```shell
+slimctl slim start --endpoint 127.0.0.1:46357
+```
 
 3. Start the server
-    ```bash
-    cd $(git rev-parse --show-toplevel)/data-plane/python/integrations/slima2a
-    uv run examples/travel_planner_agent/server.py
-    ```
+
+```bash
+uv run python -m examples.travel_planner_agent.server
+```
 
 4. Run the loop client
-    ```bash
-    uv run examples/travel_planner_agent/client.py
-    ```
+
+```bash
+uv run python -m examples.travel_planner_agent.client
+```

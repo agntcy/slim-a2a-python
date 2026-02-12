@@ -9,9 +9,7 @@ managed:
 plugins:
   # Generate python protobuf related code
   # Generates _pb2_slimrpc.py files
-
-  # TODO: this should be downloaded from a released plugin version
-  - local: ../data-plane/target/aarch64-apple-darwin/release/protoc-gen-slimrpc-python
+  - local: protoc-gen-slimrpc-python
     out: slima2a/types
     opt:
       - 'types_import=from a2a.grpc import a2a_pb2 as a2a__pb2'

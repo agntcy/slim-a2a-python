@@ -4,7 +4,6 @@ import logging
 from uuid import uuid4
 
 import httpx
-import slim_bindings
 from a2a.client import (
     A2ACardResolver,
     Client,
@@ -22,6 +21,7 @@ from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
 
+from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
     SRPCTransport,
@@ -57,40 +57,12 @@ async def main() -> None:
 
     httpx_client = httpx.AsyncClient()
 
-    # Set the event loop for slim_bindings to handle callbacks from Rust threads
-    slim_bindings.slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
-
-    # Initialize slim_bindings service
-    tracing_config = slim_bindings.new_tracing_config()
-    runtime_config = slim_bindings.new_runtime_config()
-    service_config = slim_bindings.new_service_config()
-
-    tracing_config.log_level = "info"
-
-    slim_bindings.initialize_with_configs(
-        tracing_config=tracing_config,
-        runtime_config=runtime_config,
-        service_config=[service_config],
+    # Initialize and connect to SLIM
+    service, slim_local_app, local_name, conn_id = await setup_slim_client(
+        namespace="agntcy",
+        group="demo",
+        name="client",
     )
-
-    service = slim_bindings.get_global_service()
-
-    # Create local and remote names
-    local_name = slim_bindings.Name("agntcy", "demo", "client")
-
-    # Connect to SLIM
-    client_config_slim = slim_bindings.new_insecure_client_config(
-        "http://localhost:46357"
-    )
-    conn_id = await service.connect_async(client_config_slim)
-
-    # Create app with shared secret
-    slim_local_app = service.create_app_with_secret(
-        local_name, "secretsecretsecretsecretsecretsecret"
-    )
-
-    # Subscribe to local name
-    await slim_local_app.subscribe_async(local_name, conn_id)
 
     client_config = ClientConfig(
         supported_transports=["JSONRPC", "slimrpc"],
