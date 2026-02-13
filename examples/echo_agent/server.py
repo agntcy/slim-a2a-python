@@ -73,7 +73,6 @@ async def main() -> None:
             )
 
             # Run server
-            logging.getLogger(__name__).info("Server starting...")
             await server.serve_async()
         case "starlette":
             servicer = A2AStarletteApplication(
