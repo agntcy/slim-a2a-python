@@ -51,9 +51,8 @@ class DefaultCallContextBuilder(CallContextBuilder):
 
 def get_metadata_value(context: slim_bindings.Context, key: str) -> str:
     """Extract metadata value from slim_bindings context."""
-    # Note: Adjust this based on actual slim_bindings.Context API
-    # This may need to be context.metadata() or similar
-    return ""
+
+    return context.metadata().get(HTTP_EXTENSION_HEADER, "")
 
 
 class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
