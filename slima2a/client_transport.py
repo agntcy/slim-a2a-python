@@ -39,13 +39,14 @@ def slimrpc_channel_factory(
     def factory(remote: str) -> slim_bindings.Channel:
         # Parse the remote name from the URL
         remote_parts = remote.split("/")
-        if len(remote_parts) == 3:
-            remote_name = slim_bindings.Name(
-                remote_parts[0], remote_parts[1], remote_parts[2]
+        if len(remote_parts) != 3:
+            raise ValueError(
+                f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
             )
-        else:
-            # Fallback: treat the whole string as the name
-            remote_name = slim_bindings.Name("agntcy", "a2a", remote)
+
+        remote_name = slim_bindings.Name(
+            remote_parts[0], remote_parts[1], remote_parts[2]
+        )
 
         return slim_bindings.Channel.new_with_connection(
             local_app, remote_name, conn_id
