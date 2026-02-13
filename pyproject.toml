@@ -70,3 +70,7 @@ follow_untyped_imports = true
 module = ["slim_bindings.*"]
 follow_untyped_imports = true
 #ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["slima2a.types.a2a_pb2_slimrpc"]
+ignore_errors = true

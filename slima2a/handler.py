@@ -22,14 +22,8 @@ from google.rpc import code_pb2
 
 from slima2a.types import a2a_pb2_slimrpc
 
-
-class SlimRPCError(Exception):
-    """Exception raised for SlimRPC errors."""
-
-    def __init__(self, code: int, message: str) -> None:
-        self.code = code
-        self.message = message
-        super().__init__(message)
+# Use RpcError from slim_bindings instead of defining our own
+SlimRPCError = slim_bindings.RpcError.Rpc  # type: ignore[attr-defined]
 
 
 class CallContextBuilder(ABC):
@@ -321,59 +315,71 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
                 raise SlimRPCError(
                     code=code_pb2.INTERNAL,
                     message=f"JSONParseError: {error.error.message}",
+                    details=None,
                 )
             case types.InvalidRequestError():
                 raise SlimRPCError(
                     code=code_pb2.INVALID_ARGUMENT,
                     message=f"InvalidRequestError: {error.error.message}",
+                    details=None,
                 )
             case types.MethodNotFoundError():
                 raise SlimRPCError(
                     code=code_pb2.NOT_FOUND,
                     message=f"MethodNotFoundError: {error.error.message}",
+                    details=None,
                 )
             case types.InvalidParamsError():
                 raise SlimRPCError(
                     code=code_pb2.INVALID_ARGUMENT,
                     message=f"InvalidParamsError: {error.error.message}",
+                    details=None,
                 )
             case types.InternalError():
                 raise SlimRPCError(
                     code=code_pb2.INTERNAL,
                     message=f"InternalError: {error.error.message}",
+                    details=None,
                 )
             case types.TaskNotFoundError():
                 raise SlimRPCError(
                     code=code_pb2.NOT_FOUND,
                     message=f"TaskNotFoundError: {error.error.message}",
+                    details=None,
                 )
             case types.TaskNotCancelableError():
                 raise SlimRPCError(
                     code=code_pb2.UNIMPLEMENTED,
                     message=f"TaskNotCancelableError: {error.error.message}",
+                    details=None,
                 )
             case types.PushNotificationNotSupportedError():
                 raise SlimRPCError(
                     code=code_pb2.UNIMPLEMENTED,
                     message=f"PushNotificationNotSupportedError: {error.error.message}",
+                    details=None,
                 )
             case types.UnsupportedOperationError():
                 raise SlimRPCError(
                     code=code_pb2.UNIMPLEMENTED,
                     message=f"UnsupportedOperationError: {error.error.message}",
+                    details=None,
                 )
             case types.ContentTypeNotSupportedError():
                 raise SlimRPCError(
                     code=code_pb2.UNIMPLEMENTED,
                     message=f"ContentTypeNotSupportedError: {error.error.message}",
+                    details=None,
                 )
             case types.InvalidAgentResponseError():
                 raise SlimRPCError(
                     code=code_pb2.INTERNAL,
                     message=f"InvalidAgentResponseError: {error.error.message}",
+                    details=None,
                 )
             case _:
                 raise SlimRPCError(
                     code=code_pb2.UNKNOWN,
                     message=f"Unknown error type: {error.error}",
+                    details=None,
                 )
