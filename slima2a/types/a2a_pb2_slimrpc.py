@@ -154,62 +154,82 @@ class A2AServiceServicer:
 
     def SendMessage(self, request, context):
         """Method for SendMessage. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def SendStreamingMessage(self, request, context):
         """Method for SendStreamingMessage. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def GetTask(self, request, context):
         """Method for GetTask. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def CancelTask(self, request, context):
         """Method for CancelTask. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def TaskSubscription(self, request, context):
         """Method for TaskSubscription. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def CreateTaskPushNotificationConfig(self, request, context):
         """Method for CreateTaskPushNotificationConfig. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def GetTaskPushNotificationConfig(self, request, context):
         """Method for GetTaskPushNotificationConfig. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def ListTaskPushNotificationConfig(self, request, context):
         """Method for ListTaskPushNotificationConfig. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def GetAgentCard(self, request, context):
         """Method for GetAgentCard. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
     def DeleteTaskPushNotificationConfig(self, request, context):
         """Method for DeleteTaskPushNotificationConfig. Implement your service logic here."""
-        raise slim_bindings.SRPCResponseError(
-            code=code__pb2.UNIMPLEMENTED, message="Method not implemented!"
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
         )
 
 
@@ -220,94 +240,186 @@ class _A2AServiceServicer_SendMessage_Handler:
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.SendMessageRequest.FromString(request)
-        response = await self.servicer.SendMessage(request_msg, context)
-        return a2a__pb2.SendMessageResponse.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.SendMessageRequest.FromString(request)
+            response = await self.servicer.SendMessage(request_msg, context)
+            return a2a__pb2.SendMessageResponse.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_SendStreamingMessage_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context, sink: slim_bindings.ResponseSink):
-        request_msg = a2a__pb2.SendMessageRequest.FromString(request)
-        response_iter = self.servicer.SendStreamingMessage(request_msg, context)
-        async for response in response_iter:
-            sink.send(a2a__pb2.StreamResponse.SerializeToString(response))
-        sink.close()
+        try:
+            request_msg = a2a__pb2.SendMessageRequest.FromString(request)
+            response_iter = self.servicer.SendStreamingMessage(request_msg, context)
+            async for response in response_iter:
+                await sink.send_async(a2a__pb2.StreamResponse.SerializeToString(response))
+            await sink.close_async()
+        except slim_bindings.RpcError as e:
+            await sink.send_error_async(e)
+        except Exception as e:
+            rpc_error = slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
+            await sink.send_error_async(rpc_error)
 
 class _A2AServiceServicer_GetTask_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.GetTaskRequest.FromString(request)
-        response = await self.servicer.GetTask(request_msg, context)
-        return a2a__pb2.Task.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.GetTaskRequest.FromString(request)
+            response = await self.servicer.GetTask(request_msg, context)
+            return a2a__pb2.Task.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_CancelTask_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.CancelTaskRequest.FromString(request)
-        response = await self.servicer.CancelTask(request_msg, context)
-        return a2a__pb2.Task.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.CancelTaskRequest.FromString(request)
+            response = await self.servicer.CancelTask(request_msg, context)
+            return a2a__pb2.Task.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_TaskSubscription_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context, sink: slim_bindings.ResponseSink):
-        request_msg = a2a__pb2.TaskSubscriptionRequest.FromString(request)
-        response_iter = self.servicer.TaskSubscription(request_msg, context)
-        async for response in response_iter:
-            sink.send(a2a__pb2.StreamResponse.SerializeToString(response))
-        sink.close()
+        try:
+            request_msg = a2a__pb2.TaskSubscriptionRequest.FromString(request)
+            response_iter = self.servicer.TaskSubscription(request_msg, context)
+            async for response in response_iter:
+                await sink.send_async(a2a__pb2.StreamResponse.SerializeToString(response))
+            await sink.close_async()
+        except slim_bindings.RpcError as e:
+            await sink.send_error_async(e)
+        except Exception as e:
+            rpc_error = slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
+            await sink.send_error_async(rpc_error)
 
 class _A2AServiceServicer_CreateTaskPushNotificationConfig_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.CreateTaskPushNotificationConfigRequest.FromString(request)
-        response = await self.servicer.CreateTaskPushNotificationConfig(request_msg, context)
-        return a2a__pb2.TaskPushNotificationConfig.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.CreateTaskPushNotificationConfigRequest.FromString(request)
+            response = await self.servicer.CreateTaskPushNotificationConfig(request_msg, context)
+            return a2a__pb2.TaskPushNotificationConfig.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_GetTaskPushNotificationConfig_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.GetTaskPushNotificationConfigRequest.FromString(request)
-        response = await self.servicer.GetTaskPushNotificationConfig(request_msg, context)
-        return a2a__pb2.TaskPushNotificationConfig.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.GetTaskPushNotificationConfigRequest.FromString(request)
+            response = await self.servicer.GetTaskPushNotificationConfig(request_msg, context)
+            return a2a__pb2.TaskPushNotificationConfig.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_ListTaskPushNotificationConfig_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.ListTaskPushNotificationConfigRequest.FromString(request)
-        response = await self.servicer.ListTaskPushNotificationConfig(request_msg, context)
-        return a2a__pb2.ListTaskPushNotificationConfigResponse.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.ListTaskPushNotificationConfigRequest.FromString(request)
+            response = await self.servicer.ListTaskPushNotificationConfig(request_msg, context)
+            return a2a__pb2.ListTaskPushNotificationConfigResponse.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_GetAgentCard_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.GetAgentCardRequest.FromString(request)
-        response = await self.servicer.GetAgentCard(request_msg, context)
-        return a2a__pb2.AgentCard.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.GetAgentCardRequest.FromString(request)
+            response = await self.servicer.GetAgentCard(request_msg, context)
+            return a2a__pb2.AgentCard.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 class _A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        request_msg = a2a__pb2.DeleteTaskPushNotificationConfigRequest.FromString(request)
-        response = await self.servicer.DeleteTaskPushNotificationConfig(request_msg, context)
-        return google__protobuf__empty_pb2.Empty.SerializeToString(response)
+        try:
+            request_msg = a2a__pb2.DeleteTaskPushNotificationConfigRequest.FromString(request)
+            response = await self.servicer.DeleteTaskPushNotificationConfig(request_msg, context)
+            return google__protobuf__empty_pb2.Empty.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
 
 
 def add_A2AServiceServicer_to_server(servicer, server: slim_bindings.Server):
