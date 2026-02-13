@@ -22,7 +22,6 @@ from google.rpc import code_pb2
 
 from slima2a.types import a2a_pb2_slimrpc
 
-# Use RpcError from slim_bindings instead of defining our own
 SlimRPCError = slim_bindings.RpcError.Rpc  # type: ignore[attr-defined]
 
 
