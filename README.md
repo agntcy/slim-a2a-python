@@ -253,5 +253,3 @@ The `slima2a` package provides convenient helper functions to simplify SLIM setu
 - **`connect_and_subscribe(service, local_name, slim_url="http://localhost:46357", secret="...")`** - Connect to SLIM server and subscribe to a local name
 
 ```
-
-```
