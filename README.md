@@ -251,5 +251,4 @@ The `slima2a` package provides convenient helper functions to simplify SLIM setu
 - **`setup_slim_client(namespace, group, name, slim_url="http://localhost:46357", secret="...", log_level="info")`** - Complete SLIM client setup in one call
 - **`initialize_slim_service(log_level="info")`** - Initialize SLIM service with default configuration
 - **`connect_and_subscribe(service, local_name, slim_url="http://localhost:46357", secret="...")`** - Connect to SLIM server and subscribe to a local name
-
 ```
