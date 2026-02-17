@@ -6,8 +6,8 @@ identities for authentication and addressing.
 
 ## Compile the protobuf
 
- - Refer to this [documentation](xxx) to download the correct slirpc compiler for your system and make sure to have in in $PATH.
- - Install [bufbuild](https://buf.build/docs/cli/installation/)
+- Refer to this [documentation](https://docs.agntcy.org/slim/slim-slimrpc-compiler/) to download the correct slirpc compiler for your system and make sure to have in in $PATH.
+- Install [bufbuild](https://buf.build/docs/cli/installation/)
 
 Run the following from the repo root:
 
