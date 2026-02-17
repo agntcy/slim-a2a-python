@@ -6,8 +6,8 @@ identities for authentication and addressing.
 
 ## Compile the protobuf
 
- - Refer to this [documentation](xxx) to download the correct slirpc compiler for your system and make sure to have in in $PATH.
- - Install [bufbuild](https://buf.build/docs/cli/installation/)
+- Refer to this [documentation]([xxx](https://docs.agntcy.org/slim/slim-slimrpc-compiler/) to download the correct slirpc compiler for your system and make sure to have in in $PATH.
+- Install [bufbuild](https://buf.build/docs/cli/installation/)
 
 Run the following from the repo root:
 
@@ -251,4 +251,7 @@ The `slima2a` package provides convenient helper functions to simplify SLIM setu
 - **`setup_slim_client(namespace, group, name, slim_url="http://localhost:46357", secret="...", log_level="info")`** - Complete SLIM client setup in one call
 - **`initialize_slim_service(log_level="info")`** - Initialize SLIM service with default configuration
 - **`connect_and_subscribe(service, local_name, slim_url="http://localhost:46357", secret="...")`** - Connect to SLIM server and subscribe to a local name
+
+```
+
 ```

@@ -1,4 +1,5 @@
 # Travel Planner Example
+
 This is the Travel Planner Example from the A2A repo, modified to use SLIM A2A
 
 ## Getting started
@@ -7,12 +8,12 @@ This is the Travel Planner Example from the A2A repo, modified to use SLIM A2A
 
    You can set the required values either via a `.env` file or as environment variables.
 
-   | Variable | Required | Default |
-   |---|---|---|
-   | `AZURE_OPENAI_API_KEY` | ✅ | — |
-   | `AZURE_OPENAI_ENDPOINT` | ✅ | — |
-   | `AZURE_OPENAI_API_VERSION` | ❌ | `2024-08-01-preview` |
-   | `AZURE_OPENAI_DEPLOYMENT_NAME` | ❌ | `gpt-4o` |
+   | Variable                       | Required | Default              |
+   | ------------------------------ | -------- | -------------------- |
+   | `AZURE_OPENAI_API_KEY`         | ✅       | —                    |
+   | `AZURE_OPENAI_ENDPOINT`        | ✅       | —                    |
+   | `AZURE_OPENAI_API_VERSION`     | ❌       | `2024-08-01-preview` |
+   | `AZURE_OPENAI_DEPLOYMENT_NAME` | ❌       | `gpt-4o`             |
 
    **Option A:** Create a `.env` file:
 
@@ -35,8 +36,7 @@ This is the Travel Planner Example from the A2A repo, modified to use SLIM A2A
    ```
 
 2. Start SLIM
-3. 
-Download the slimctl version for your system from the [release page.](https://github.com/agntcy/slim/releases/tag/slimctl-v1.0.0)
+3. Download the slimctl version for your system from the [release page.](https://github.com/agntcy/slim/releases/tag/slimctl-v1.0.0)
 
 ```shell
 slimctl slim start --endpoint 127.0.0.1:46357
