@@ -8,7 +8,6 @@ logging.getLogger("asyncio").setLevel(logging.ERROR)
 
 # ruff: noqa: E402
 import httpx
-import slimrpc
 from a2a.client import (
     Client,
     ClientFactory,
@@ -21,6 +20,7 @@ from a2a.types import (
     TextPart,
 )
 
+from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
     SRPCTransport,
@@ -79,24 +79,18 @@ async def main() -> None:
 
     httpx_client = httpx.AsyncClient()
 
-    slim_local_app = await slimrpc.common.create_local_app(
-        slimrpc.SLIMAppConfig(
-            identity="agntcy/demo/client",
-            slim_client_config={
-                "endpoint": "http://localhost:46357",
-                "tls": {
-                    "insecure": True,
-                },
-            },
-            shared_secret="secret",
-        )
+    # Initialize and connect to SLIM
+    service, slim_local_app, local_name, conn_id = await setup_slim_client(
+        namespace="agntcy",
+        group="demo",
+        name="client",
     )
 
     client_config = ClientConfig(
         supported_transports=["JSONRPC", "slimrpc"],
         streaming=True,
         httpx_client=httpx_client,
-        slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app),
+        slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
     )
     client_factory = ClientFactory(client_config)
 

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Callable
 
 import slim_bindings
-import slimrpc
 from a2a.client.client import ClientConfig as A2AClientConfig
 from a2a.client.middleware import ClientCallContext, ClientCallInterceptor
 from a2a.client.transports.base import ClientTransport
@@ -34,17 +33,31 @@ logger = logging.getLogger(__name__)
 
 
 def slimrpc_channel_factory(
-    local_app: slim_bindings.Slim,
-) -> Callable[[str], slimrpc.Channel]:
-    def factory(remote: str) -> slimrpc.Channel:
-        return slimrpc.Channel(local_app=local_app, remote=remote)
+    local_app: slim_bindings.App,
+    conn_id: int,
+) -> Callable[[str], slim_bindings.Channel]:
+    def factory(remote: str) -> slim_bindings.Channel:
+        # Parse the remote name from the URL
+        remote_parts = remote.split("/")
+        if len(remote_parts) != 3:
+            raise ValueError(
+                f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
+            )
+
+        remote_name = slim_bindings.Name(
+            remote_parts[0], remote_parts[1], remote_parts[2]
+        )
+
+        return slim_bindings.Channel.new_with_connection(
+            local_app, remote_name, conn_id
+        )
 
     return factory
 
 
 @dataclass
 class ClientConfig(A2AClientConfig):
-    slimrpc_channel_factory: Callable[[str], slimrpc.Channel] | None = None
+    slimrpc_channel_factory: Callable[[str], slim_bindings.Channel] | None = None
 
 
 @trace_class(kind=SpanKind.CLIENT)
@@ -53,7 +66,7 @@ class SRPCTransport(ClientTransport):
 
     def __init__(
         self,
-        channel: slimrpc.Channel,
+        channel: slim_bindings.Channel,
         agent_card: AgentCard | None,
     ) -> None:
         """Initializes the GrpcTransport."""

@@ -18,19 +18,34 @@ class TravelPlannerAgent:
             config_path = pathlib.Path(__file__).parent / "config.json"
             with config_path.open() as f:
                 config = json.load(f)
-            if not os.getenv(config["api_key"]):
-                print(f"{config['api_key']} environment variable not set.")
+            if not os.getenv(config["api_key_env"]):
+                print(f"{config['api_key_env']} environment variable not set.")
                 sys.exit(1)
-            api_key = os.getenv(config["api_key"])
+            api_key = os.getenv(config["api_key_env"])
+
+            azure_endpoint = os.getenv(config["azure_endpoint_env"])
+            if not azure_endpoint:
+                print(f"{config['azure_endpoint_env']} environment variable not set.")
+                sys.exit(1)
+
+            api_version = os.getenv(
+                config["api_version_env"],
+                config["api_version"],
+            )
+
+            model_name = os.getenv(
+                config["model_name_env"],
+                config["model_name"],
+            )
 
             self.model = AzureChatOpenAI(
-                model=config["model_name"],
-                azure_endpoint=config["azure_endpoint"],
+                model=model_name,
+                azure_endpoint=azure_endpoint,
                 api_key=api_key,  # type: ignore
                 temperature=config[
                     "temperature"
                 ],  # Control the generation randomness (0-2, higher values indicate greater randomness)
-                api_version=config["api_version"],
+                api_version=api_version,
             )
         except FileNotFoundError:
             print("Error: The configuration file config.json cannot be found.")

@@ -4,7 +4,6 @@ import logging
 from uuid import uuid4
 
 import httpx
-import slimrpc
 from a2a.client import (
     A2ACardResolver,
     Client,
@@ -22,6 +21,7 @@ from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
 
+from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
     SRPCTransport,
@@ -57,24 +57,18 @@ async def main() -> None:
 
     httpx_client = httpx.AsyncClient()
 
-    slim_local_app = await slimrpc.common.create_local_app(
-        slimrpc.SLIMAppConfig(
-            identity="agntcy/demo/client",
-            slim_client_config={
-                "endpoint": "http://localhost:46357",
-                "tls": {
-                    "insecure": True,
-                },
-            },
-            shared_secret="secretsecretsecretsecretsecretsecret",
-        ),
+    # Initialize and connect to SLIM
+    service, slim_local_app, local_name, conn_id = await setup_slim_client(
+        namespace="agntcy",
+        group="demo",
+        name="client",
     )
 
     client_config = ClientConfig(
         supported_transports=["JSONRPC", "slimrpc"],
         streaming=args.stream,
         httpx_client=httpx_client,
-        slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app),
+        slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
     )
     client_factory = ClientFactory(client_config)
 
@@ -169,14 +163,6 @@ async def send_message(
 
                 if update:
                     logger.info(f"update: {update.model_dump(mode='json')}")
-    except slimrpc.SRPCResponseError as e:
-        logger.error(
-            f"failed sending message or processing response on SRPC: {e}",
-            exc_info=True,
-        )
-        raise RuntimeError(
-            "failed sending message or processing response on SRPC"
-        ) from e
     except Exception as e:
         logger.error(
             f"failed sending message or processing response: {e}",

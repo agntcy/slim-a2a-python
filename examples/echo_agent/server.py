@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import logging
 
-import slimrpc
+import slim_bindings
 import uvicorn
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -14,6 +14,7 @@ from a2a.types import (
 )
 
 from examples.echo_agent.echo_agent_executor import EchoAgentExecutor
+from slima2a import setup_slim_client
 from slima2a.handler import SRPCHandler
 from slima2a.types.a2a_pb2_slimrpc import add_A2AServiceServicer_to_server
 
@@ -54,24 +55,25 @@ async def main() -> None:
         case "slimrpc":
             servicer = SRPCHandler(agent_card, default_request_handler)
 
-            server = await slimrpc.Server.from_slim_app_config(
-                slim_app_config=slimrpc.SLIMAppConfig(
-                    identity="agntcy/demo/echo_agent",
-                    slim_client_config={
-                        "endpoint": "http://localhost:46357",
-                        "tls": {
-                            "insecure": True,
-                        },
-                    },
-                    shared_secret="secretsecretsecretsecretsecretsecret",
-                )
+            # Initialize and connect to SLIM
+            service, local_app, local_name, conn_id = await setup_slim_client(
+                namespace="agntcy",
+                group="demo",
+                name="echo_agent",
             )
+
+            # Create server
+            server = slim_bindings.Server.new_with_connection(
+                local_app, local_name, conn_id
+            )
+
             add_A2AServiceServicer_to_server(
                 servicer,
                 server,
             )
 
-            await server.run()
+            # Run server
+            await server.serve_async()
         case "starlette":
             servicer = A2AStarletteApplication(
                 agent_card=agent_card,
