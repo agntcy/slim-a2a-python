@@ -1397,22 +1397,27 @@ wheels = [
 
 [[package]]
 name = "slim-bindings"
-version = "1.1.1"
-source = { registry = "https://pypi.org/simple" }
+version = "1.2.0"
+source = { path = "../slim/data-plane/target/wheels/slim_bindings-1.2.0-py3-none-macosx_11_0_arm64.whl" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/83/db/dd31ac4e49e7693b2f0d28186a11fb93ce5ba91de2bb71007b65bff3776a/slim_bindings-1.1.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:10e5852863fe202425991354e3bdc937974e8d42fe775fb14f480624d028363a", size = 14378544, upload-time = "2026-02-13T13:43:35.845Z" },
-    { url = "https://files.pythonhosted.org/packages/10/49/87947f81902327f902ef773413672d6016819fcbda493ca625a2745518c8/slim_bindings-1.1.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:66b1937fd5268f48ba02238f641f7231b018a06859fb83e28a13bb45b736f84c", size = 14092048, upload-time = "2026-02-13T13:43:38.479Z" },
-    { url = "https://files.pythonhosted.org/packages/af/b9/63ee6bf2ebd1b4841272b21cd59fd23272a7e65c87b3f99f65f013178a22/slim_bindings-1.1.1-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:6ed419bb0c0ac389a27815f2c724766e7cad4b1965db672edd5d1f173b238e48", size = 12664374, upload-time = "2026-02-13T13:43:40.503Z" },
-    { url = "https://files.pythonhosted.org/packages/ef/d0/3358a25ef99e3dd2b6ddd5bc3a00ca2decb967d28a76ae9301bf93f5a776/slim_bindings-1.1.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:2d3b15188adc21882b53b3561e268c66bb88cc354a2f1f0b79859067e2d5a7ce", size = 13139126, upload-time = "2026-02-13T13:43:43.075Z" },
-    { url = "https://files.pythonhosted.org/packages/90/8b/99810d2fd2a2ff99e03fb90c8f452ce9e7fb99d8ff8b6bcaca66b338b1de/slim_bindings-1.1.1-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:fddbc0db3eb81325f7964a8c59b404430cf4f7c8a2f8d7cf20b35c916b74a6c6", size = 12662246, upload-time = "2026-02-13T13:43:45.159Z" },
-    { url = "https://files.pythonhosted.org/packages/e1/93/9fbbccaf4838dd4eba93cf868201eab5134ffbc695c0f67eee60e48885fb/slim_bindings-1.1.1-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:e5e3600c511b4b0fa1ac2fa39c9b458e4b59ede79d3d7fb251fdd441e6e60bb2", size = 13138270, upload-time = "2026-02-13T13:43:47.292Z" },
-    { url = "https://files.pythonhosted.org/packages/14/b9/4355bec4c4efd64f6c3157aef138aa7db3933d3cc53224853632a4bd174b/slim_bindings-1.1.1-py3-none-win_amd64.whl", hash = "sha256:300f49af8c7a0339b38f27f5f557990685e4e3f7cc89aa8ea841c2b9c1b0f126", size = 11904715, upload-time = "2026-02-13T13:43:49.33Z" },
-    { url = "https://files.pythonhosted.org/packages/80/f9/699ed548e6d77177ef6cf8209769279a3c984a757d7f25d7a6d43023cfc9/slim_bindings-1.1.1-py3-none-win_arm64.whl", hash = "sha256:5256f17028275981251eddb4788b8a7f92dcf12262a9dbbba4b972214aa955ab", size = 11108882, upload-time = "2026-02-13T13:43:51.046Z" },
+    { filename = "slim_bindings-1.2.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:e9f519630941ff865e9e6b88667ae43282d20da454011445f21a54e93246681b" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "googleapis-common-protos", marker = "extra == 'examples'", specifier = ">=1.72.0" },
+    { name = "prompt-toolkit", marker = "extra == 'examples'", specifier = ">=3.0.52" },
+    { name = "protobuf", marker = "extra == 'examples'", specifier = ">=6.33.4" },
+    { name = "pydantic", marker = "extra == 'examples'", specifier = ">=2.0.0" },
+    { name = "pydantic-settings", marker = "extra == 'examples'", specifier = ">=2.0.0" },
+    { name = "pyyaml", marker = "extra == 'examples'", specifier = ">=6.0.3" },
+    { name = "tomli", marker = "extra == 'examples'", specifier = ">=2.4.0" },
+]
+provides-extras = ["examples"]
 
 [[package]]
 name = "slima2a"
-version = "0.2.3"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "a2a-sdk", extra = ["telemetry"] },
@@ -1438,7 +1443,7 @@ testing = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["telemetry"], specifier = "==0.3.20" },
-    { name = "slim-bindings", specifier = "~=1.1" },
+    { name = "slim-bindings", path = "../slim/data-plane/target/wheels/slim_bindings-1.2.0-py3-none-macosx_11_0_arm64.whl" },
 ]
 
 [package.metadata.requires-dev]

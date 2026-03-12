@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 
@@ -22,6 +23,8 @@ from slima2a.types.a2a_pb2_slimrpc import add_A2AServiceServicer_to_server
 
 
 async def main() -> None:
+    args = parse_arguments()
+
     skill = AgentSkill(
         id="travel_planner",
         name="travel planner agent",
@@ -52,7 +55,7 @@ async def main() -> None:
     service, local_app, local_name, conn_id = await setup_slim_client(
         namespace="agntcy",
         group="demo",
-        name="travel_planner_agent",
+        name=args.instance,
     )
 
     # Create server
@@ -65,6 +68,19 @@ async def main() -> None:
 
     # Run server
     await server.serve_async()
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--instance",
+        type=str,
+        required=False,
+        default="travel_planner_agent",
+    )
+
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

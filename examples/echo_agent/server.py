@@ -59,7 +59,7 @@ async def main() -> None:
             service, local_app, local_name, conn_id = await setup_slim_client(
                 namespace="agntcy",
                 group="demo",
-                name="echo_agent",
+                name=args.instance,
             )
 
             # Create server
@@ -89,6 +89,13 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--type", type=str, required=False, default="slimrpc")
+
+    parser.add_argument(
+        "--instance",
+        type=str,
+        required=False,
+        default="echo_agent",
+    )
 
     parser.add_argument(
         "--log-level",
