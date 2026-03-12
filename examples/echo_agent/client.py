@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+from typing import cast
 from uuid import uuid4
 
 import httpx
@@ -15,6 +16,7 @@ from a2a.types import (
     Message,
     Part,
     Role,
+    TaskArtifactUpdateEvent,
     TextPart,
 )
 from a2a.utils.constants import (
@@ -29,6 +31,12 @@ from slima2a.client_transport import (
 )
 
 BASE_URL = "http://localhost:9999"
+
+# Two echo agent instances to multicast to
+AGENT_NAMES = [
+    "agntcy/demo/echo_agent1",
+    "agntcy/demo/echo_agent2",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +74,7 @@ async def main() -> None:
 
     client_config = ClientConfig(
         supported_transports=["JSONRPC", "slimrpc"],
-        streaming=args.stream,
+        streaming=True,
         httpx_client=httpx_client,
         slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
     )
@@ -78,7 +86,7 @@ async def main() -> None:
     agent_card: AgentCard
     match args.type:
         case "slimrpc":
-            agent_card = minimal_agent_card("agntcy/demo/echo_agent", ["slimrpc"])
+            agent_card = minimal_agent_card(",".join(AGENT_NAMES), ["slimrpc"])
         case "starlette":
             agent_card = await fetch_agent_card(
                 resolver=A2ACardResolver(
@@ -90,6 +98,19 @@ async def main() -> None:
             raise ValueError(f"Invalid client type: {args.type}")
 
     client = client_factory.create(card=agent_card)
+
+    if args.type == "slimrpc":
+        # Fetch agent cards from all servers in the group.
+        transport = cast(SRPCTransport, client._transport)  # type: ignore[attr-defined]
+        async for card in transport.get_all_cards():
+            logger.info(
+                f"agent card: {card.model_dump_json(indent=2, exclude_none=True)}"
+            )
+
+        # Fetch the real card from the first server so that
+        # client._card.capabilities.streaming=True before send_message.
+        await client.get_card()
+
     logger.info("A2AClient initialized.")
 
     response_text = await send_message(client, args.text)
@@ -105,12 +126,6 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         required=False,
         default="ERROR",
-    )
-    parser.add_argument(
-        "--stream",
-        action="store_true",
-        required=False,
-        default=False,
     )
     parser.add_argument(
         "--text",
@@ -144,24 +159,25 @@ async def send_message(
     )
     logger.info(f"associated request ({request_id}) with text: {text}")
 
-    output = ""
+    # Group output by task_id so responses from each server are kept separate.
+    outputs: dict[str, str] = {}
     try:
         async for event in client.send_message(request=request):
             if isinstance(event, Message):
+                outputs.setdefault("msg", "")
                 for part in event.parts:
                     if isinstance(part.root, TextPart):
-                        output += part.root.text
+                        outputs["msg"] += part.root.text
             else:
                 task, update = event
                 logger.info(f"task ({task.id}) status: {task.status.state}")
 
-                if task.status.state == "completed" and task.artifacts:
-                    for artifact in task.artifacts:
-                        for part in artifact.parts:
-                            if isinstance(part.root, TextPart):
-                                output += part.root.text
-
-                if update:
+                if isinstance(update, TaskArtifactUpdateEvent):
+                    outputs.setdefault(update.task_id, "")
+                    for part in update.artifact.parts:
+                        if isinstance(part.root, TextPart):
+                            outputs[update.task_id] += part.root.text
+                elif update:
                     logger.info(f"update: {update.model_dump(mode='json')}")
     except Exception as e:
         logger.error(
@@ -170,7 +186,7 @@ async def send_message(
         )
         raise RuntimeError("failed sending message or processing response") from e
 
-    return output
+    return "\n---\n".join(outputs.values())
 
 
 if __name__ == "__main__":

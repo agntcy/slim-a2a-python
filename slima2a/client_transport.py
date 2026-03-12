@@ -37,19 +37,12 @@ def slimrpc_channel_factory(
     conn_id: int,
 ) -> Callable[[str], slim_bindings.Channel]:
     def factory(remote: str) -> slim_bindings.Channel:
-        # Parse the remote name from the URL
-        remote_parts = remote.split("/")
-        if len(remote_parts) != 3:
-            raise ValueError(
-                f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
-            )
-
-        remote_name = slim_bindings.Name(
-            remote_parts[0], remote_parts[1], remote_parts[2]
-        )
-
-        return slim_bindings.Channel.new_with_connection(
-            local_app, remote_name, conn_id
+        # Parse comma-separated remote names using the bindings' own parser.
+        remote_names = [
+            slim_bindings.Name.from_string(r.strip()) for r in remote.split(",")
+        ]
+        return slim_bindings.Channel.new_group_with_connection(
+            local_app, remote_names, conn_id
         )
 
     return factory
@@ -72,7 +65,7 @@ class SRPCTransport(ClientTransport):
         """Initializes the GrpcTransport."""
         self.agent_card = agent_card
         self.channel = channel
-        self.stub = a2a_pb2_slimrpc.A2AServiceStub(channel)
+        self.stub = a2a_pb2_slimrpc.A2AServiceGroupStub(channel)
         self._needs_extended_card = (
             agent_card.supports_authenticated_extended_card if agent_card else True
         )
@@ -105,7 +98,7 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        response = await self.stub.SendMessage(
+        async for _context, response in self.stub.SendMessage(
             a2a_pb2.SendMessageRequest(
                 request=proto_utils.ToProto.message(request.message),
                 configuration=proto_utils.ToProto.message_send_configuration(
@@ -114,10 +107,11 @@ class SRPCTransport(ClientTransport):
                 metadata=proto_utils.ToProto.metadata(request.metadata),
             ),
             metadata=metadata,
-        )
-        if response.HasField("task"):
-            return proto_utils.FromProto.task(response.task)
-        return proto_utils.FromProto.message(response.msg)
+        ):
+            if response.HasField("task"):
+                return proto_utils.FromProto.task(response.task)
+            return proto_utils.FromProto.message(response.msg)
+        raise RuntimeError("No response received from agent")
 
     async def send_message_streaming(
         self,
@@ -132,7 +126,7 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        stream = self.stub.SendStreamingMessage(
+        async for _context, response in self.stub.SendStreamingMessage(
             a2a_pb2.SendMessageRequest(
                 request=proto_utils.ToProto.message(request.message),
                 configuration=proto_utils.ToProto.message_send_configuration(
@@ -141,8 +135,7 @@ class SRPCTransport(ClientTransport):
                 metadata=proto_utils.ToProto.metadata(request.metadata),
             ),
             metadata=metadata,
-        )
-        async for response in stream:
+        ):
             yield proto_utils.FromProto.stream_response(response)
 
     async def resubscribe(
@@ -158,11 +151,10 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        stream = self.stub.TaskSubscription(
+        async for _context, response in self.stub.TaskSubscription(
             a2a_pb2.TaskSubscriptionRequest(name=f"tasks/{request.id}"),
             metadata=metadata,
-        )
-        async for response in stream:
+        ):
             yield proto_utils.FromProto.stream_response(response)
 
     async def get_task(
@@ -176,10 +168,11 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        task = await self.stub.GetTask(
+        async for _context, task in self.stub.GetTask(
             a2a_pb2.GetTaskRequest(name=f"tasks/{request.id}"), metadata=metadata
-        )
-        return proto_utils.FromProto.task(task)
+        ):
+            return proto_utils.FromProto.task(task)
+        raise RuntimeError("No response received from agent")
 
     async def cancel_task(
         self,
@@ -192,10 +185,11 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        task = await self.stub.CancelTask(
+        async for _context, task in self.stub.CancelTask(
             a2a_pb2.CancelTaskRequest(name=f"tasks/{request.id}"), metadata=metadata
-        )
-        return proto_utils.FromProto.task(task)
+        ):
+            return proto_utils.FromProto.task(task)
+        raise RuntimeError("No response received from agent")
 
     async def set_task_callback(
         self,
@@ -208,15 +202,16 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        config = await self.stub.CreateTaskPushNotificationConfig(
+        async for _context, config in self.stub.CreateTaskPushNotificationConfig(
             a2a_pb2.CreateTaskPushNotificationConfigRequest(
                 parent=f"tasks/{request.task_id}",
                 config_id=request.push_notification_config.id,
                 config=proto_utils.ToProto.task_push_notification_config(request),
             ),
             metadata=metadata,
-        )
-        return proto_utils.FromProto.task_push_notification_config(config)
+        ):
+            return proto_utils.FromProto.task_push_notification_config(config)
+        raise RuntimeError("No response received from agent")
 
     async def get_task_callback(
         self,
@@ -229,13 +224,14 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        config = await self.stub.GetTaskPushNotificationConfig(
+        async for _context, config in self.stub.GetTaskPushNotificationConfig(
             a2a_pb2.GetTaskPushNotificationConfigRequest(
                 name=f"tasks/{request.id}/pushNotificationConfigs/{request.push_notification_config_id}",
             ),
             metadata=metadata,
-        )
-        return proto_utils.FromProto.task_push_notification_config(config)
+        ):
+            return proto_utils.FromProto.task_push_notification_config(config)
+        raise RuntimeError("No response received from agent")
 
     async def get_card(
         self,
@@ -253,14 +249,30 @@ class SRPCTransport(ClientTransport):
         metadata = {}
         if extensions:
             metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        card_pb = await self.stub.GetAgentCard(
+        async for _context, card_pb in self.stub.GetAgentCard(
             a2a_pb2.GetAgentCardRequest(),
             metadata=metadata,
-        )
-        card = proto_utils.FromProto.agent_card(card_pb)
-        self.agent_card = card
-        self._needs_extended_card = False
-        return card
+        ):
+            card = proto_utils.FromProto.agent_card(card_pb)
+            self.agent_card = card
+            self._needs_extended_card = False
+            return card
+        raise RuntimeError("No response received from agent")
+
+    async def get_all_cards(
+        self,
+        *,
+        extensions: list[str] | None = None,
+    ) -> AsyncGenerator[AgentCard, None]:
+        """Fetches agent cards from all servers in the group."""
+        metadata = {}
+        if extensions:
+            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
+        async for _context, card_pb in self.stub.GetAgentCard(
+            a2a_pb2.GetAgentCardRequest(),
+            metadata=metadata,
+        ):
+            yield proto_utils.FromProto.agent_card(card_pb)
 
     async def close(self) -> None:
         """Closes the transport and releases any resources."""

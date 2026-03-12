@@ -7,16 +7,15 @@ logging.getLogger("a2a.utils.telemetry").setLevel(logging.ERROR)
 logging.getLogger("asyncio").setLevel(logging.ERROR)
 
 # ruff: noqa: E402
+from typing import cast
+
 import httpx
-from a2a.client import (
-    Client,
-    ClientFactory,
-    minimal_agent_card,
-)
+from a2a.client import Client, ClientFactory, minimal_agent_card
 from a2a.types import (
     Message,
     Part,
     Role,
+    TaskArtifactUpdateEvent,
     TextPart,
 )
 
@@ -26,6 +25,14 @@ from slima2a.client_transport import (
     SRPCTransport,
     slimrpc_channel_factory,
 )
+
+# Two travel planner instances to multicast to
+AGENT_NAMES = [
+    "agntcy/demo/travel_planner_agent1",
+    "agntcy/demo/travel_planner_agent2",
+]
+
+logger = logging.getLogger(__name__)
 
 
 def print_welcome_message() -> None:
@@ -51,26 +58,31 @@ async def interact_with_server(client: Client) -> None:
             parts=[Part(root=TextPart(text=user_input))],
         )
 
-        output = ""
+        # Group output by task_id so responses from each server are kept separate.
+        outputs: dict[str, str] = {}
         try:
             async for response in client.send_message(request=request):
                 if isinstance(response, Message):
+                    outputs.setdefault("msg", "")
                     for part in response.parts:
                         if isinstance(part.root, TextPart):
-                            output += part.root.text
+                            outputs["msg"] += part.root.text
                 else:
-                    task, _ = response
+                    _, update = response
 
-                    if task.status.state == "completed" and task.artifacts:
-                        for artifact in task.artifacts:
-                            for part in artifact.parts:
-                                if isinstance(part.root, TextPart):
-                                    output += part.root.text
+                    if isinstance(update, TaskArtifactUpdateEvent):
+                        outputs.setdefault(update.task_id, "")
+                        for part in update.artifact.parts:
+                            if isinstance(part.root, TextPart):
+                                outputs[update.task_id] += part.root.text
 
         except Exception as e:
             raise RuntimeError("failed sending message or processing response") from e
 
-        print(output, end="", flush=True)
+        for i, text in enumerate(outputs.values()):
+            if i > 0:
+                print("\n---")
+            print(text, end="", flush=True)
         await asyncio.sleep(0.1)
 
 
@@ -96,8 +108,19 @@ async def main() -> None:
 
     # mypy: the register API expects a different callable type; safe to ignore here.
     client_factory.register("slimrpc", SRPCTransport.create)  # type: ignore
-    agent_card = minimal_agent_card("agntcy/demo/travel_planner_agent", ["slimrpc"])
-    client = client_factory.create(card=agent_card)
+
+    client = client_factory.create(
+        card=minimal_agent_card(",".join(AGENT_NAMES), ["slimrpc"])
+    )
+
+    # Fetch agent cards from all servers in the group.
+    transport = cast(SRPCTransport, client._transport)  # type: ignore[attr-defined]
+    async for card in transport.get_all_cards():
+        logger.info(f"agent card: {card.model_dump_json(indent=2, exclude_none=True)}")
+
+    # Fetch the real card from the first server so that
+    # client._card.capabilities.streaming=True before send_message.
+    await client.get_card()
 
     await interact_with_server(client)
 

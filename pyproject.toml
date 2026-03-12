@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.10, <4.0"
 dependencies = [
     "a2a-sdk[telemetry]==0.3.20",
-    "slim-bindings~=1.1",
+    "slim-bindings",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -43,6 +43,9 @@ examples = [
 # Default groups to install when running `uv sync`
 [tool.uv]
 default-groups = ["linting", "testing", "examples"]
+
+[tool.uv.sources]
+slim-bindings = { path = "../slim/data-plane/target/wheels/slim_bindings-1.2.0-py3-none-macosx_11_0_arm64.whl" }
 
 [tool.ruff.format]
 exclude = ["*_pb2.py", "*_pb2.pyi", "*_pb2_slimrpc.py"]
