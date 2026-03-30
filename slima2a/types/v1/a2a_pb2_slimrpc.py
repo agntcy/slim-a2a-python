@@ -9,7 +9,7 @@ from google.rpc import code_pb2 as code__pb2
 import slim_bindings
 
 import google.protobuf.empty_pb2 as google__protobuf__empty_pb2
-from a2a.grpc import a2a_pb2 as a2a__pb2
+from a2a.types import a2a_pb2 as a2a__pb2
 
 
 class A2AServiceStub:
@@ -26,7 +26,7 @@ class A2AServiceStub:
     async def SendMessage(self, request: a2a__pb2.SendMessageRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.SendMessageResponse:
         """Call SendMessage method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "SendMessage",
             a2a__pb2.SendMessageRequest.SerializeToString(request),
             timeout,
@@ -37,7 +37,7 @@ class A2AServiceStub:
     async def SendStreamingMessage(self, request: a2a__pb2.SendMessageRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
         """Call SendStreamingMessage method."""
         response_stream = await self._channel.call_unary_stream_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "SendStreamingMessage",
             a2a__pb2.SendMessageRequest.SerializeToString(request),
             timeout,
@@ -55,7 +55,7 @@ class A2AServiceStub:
     async def GetTask(self, request: a2a__pb2.GetTaskRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.Task:
         """Call GetTask method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "GetTask",
             a2a__pb2.GetTaskRequest.SerializeToString(request),
             timeout,
@@ -63,10 +63,21 @@ class A2AServiceStub:
         )
         return a2a__pb2.Task.FromString(response_bytes)
 
+    async def ListTasks(self, request: a2a__pb2.ListTasksRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.ListTasksResponse:
+        """Call ListTasks method."""
+        response_bytes = await self._channel.call_unary_async(
+            "lf.a2a.v1.A2AService",
+            "ListTasks",
+            a2a__pb2.ListTasksRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        return a2a__pb2.ListTasksResponse.FromString(response_bytes)
+
     async def CancelTask(self, request: a2a__pb2.CancelTaskRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.Task:
         """Call CancelTask method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "CancelTask",
             a2a__pb2.CancelTaskRequest.SerializeToString(request),
             timeout,
@@ -74,12 +85,12 @@ class A2AServiceStub:
         )
         return a2a__pb2.Task.FromString(response_bytes)
 
-    async def TaskSubscription(self, request: a2a__pb2.TaskSubscriptionRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
-        """Call TaskSubscription method."""
+    async def SubscribeToTask(self, request: a2a__pb2.SubscribeToTaskRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Call SubscribeToTask method."""
         response_stream = await self._channel.call_unary_stream_async(
-            "a2a.v1.A2AService",
-            "TaskSubscription",
-            a2a__pb2.TaskSubscriptionRequest.SerializeToString(request),
+            "lf.a2a.v1.A2AService",
+            "SubscribeToTask",
+            a2a__pb2.SubscribeToTaskRequest.SerializeToString(request),
             timeout,
             metadata,
         )
@@ -92,12 +103,12 @@ class A2AServiceStub:
             if stream_msg.is_data():
                 yield a2a__pb2.StreamResponse.FromString(stream_msg[0])
 
-    async def CreateTaskPushNotificationConfig(self, request: a2a__pb2.CreateTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.TaskPushNotificationConfig:
+    async def CreateTaskPushNotificationConfig(self, request: a2a__pb2.TaskPushNotificationConfig, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.TaskPushNotificationConfig:
         """Call CreateTaskPushNotificationConfig method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "CreateTaskPushNotificationConfig",
-            a2a__pb2.CreateTaskPushNotificationConfigRequest.SerializeToString(request),
+            a2a__pb2.TaskPushNotificationConfig.SerializeToString(request),
             timeout,
             metadata,
         )
@@ -106,7 +117,7 @@ class A2AServiceStub:
     async def GetTaskPushNotificationConfig(self, request: a2a__pb2.GetTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.TaskPushNotificationConfig:
         """Call GetTaskPushNotificationConfig method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "GetTaskPushNotificationConfig",
             a2a__pb2.GetTaskPushNotificationConfigRequest.SerializeToString(request),
             timeout,
@@ -114,38 +125,38 @@ class A2AServiceStub:
         )
         return a2a__pb2.TaskPushNotificationConfig.FromString(response_bytes)
 
-    async def ListTaskPushNotificationConfig(self, request: a2a__pb2.ListTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.ListTaskPushNotificationConfigResponse:
-        """Call ListTaskPushNotificationConfig method."""
+    async def ListTaskPushNotificationConfigs(self, request: a2a__pb2.ListTaskPushNotificationConfigsRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.ListTaskPushNotificationConfigsResponse:
+        """Call ListTaskPushNotificationConfigs method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
-            "ListTaskPushNotificationConfig",
-            a2a__pb2.ListTaskPushNotificationConfigRequest.SerializeToString(request),
+            "lf.a2a.v1.A2AService",
+            "ListTaskPushNotificationConfigs",
+            a2a__pb2.ListTaskPushNotificationConfigsRequest.SerializeToString(request),
             timeout,
             metadata,
         )
-        return a2a__pb2.ListTaskPushNotificationConfigResponse.FromString(response_bytes)
-
-    async def GetAgentCard(self, request: a2a__pb2.GetAgentCardRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.AgentCard:
-        """Call GetAgentCard method."""
-        response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
-            "GetAgentCard",
-            a2a__pb2.GetAgentCardRequest.SerializeToString(request),
-            timeout,
-            metadata,
-        )
-        return a2a__pb2.AgentCard.FromString(response_bytes)
+        return a2a__pb2.ListTaskPushNotificationConfigsResponse.FromString(response_bytes)
 
     async def DeleteTaskPushNotificationConfig(self, request: a2a__pb2.DeleteTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> google__protobuf__empty_pb2.Empty:
         """Call DeleteTaskPushNotificationConfig method."""
         response_bytes = await self._channel.call_unary_async(
-            "a2a.v1.A2AService",
+            "lf.a2a.v1.A2AService",
             "DeleteTaskPushNotificationConfig",
             a2a__pb2.DeleteTaskPushNotificationConfigRequest.SerializeToString(request),
             timeout,
             metadata,
         )
         return google__protobuf__empty_pb2.Empty.FromString(response_bytes)
+
+    async def GetExtendedAgentCard(self, request: a2a__pb2.GetExtendedAgentCardRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> a2a__pb2.AgentCard:
+        """Call GetExtendedAgentCard method."""
+        response_bytes = await self._channel.call_unary_async(
+            "lf.a2a.v1.A2AService",
+            "GetExtendedAgentCard",
+            a2a__pb2.GetExtendedAgentCardRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        return a2a__pb2.AgentCard.FromString(response_bytes)
 
 
 
@@ -176,6 +187,14 @@ class A2AServiceServicer:
             details=None
         )
 
+    def ListTasks(self, request, context):
+        """Method for ListTasks. Implement your service logic here."""
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
+        )
+
     def CancelTask(self, request, context):
         """Method for CancelTask. Implement your service logic here."""
         raise slim_bindings.RpcError.Rpc(
@@ -184,8 +203,8 @@ class A2AServiceServicer:
             details=None
         )
 
-    def TaskSubscription(self, request, context):
-        """Method for TaskSubscription. Implement your service logic here."""
+    def SubscribeToTask(self, request, context):
+        """Method for SubscribeToTask. Implement your service logic here."""
         raise slim_bindings.RpcError.Rpc(
             code=slim_bindings.RpcCode.UNIMPLEMENTED,
             message="Method not implemented!",
@@ -208,16 +227,8 @@ class A2AServiceServicer:
             details=None
         )
 
-    def ListTaskPushNotificationConfig(self, request, context):
-        """Method for ListTaskPushNotificationConfig. Implement your service logic here."""
-        raise slim_bindings.RpcError.Rpc(
-            code=slim_bindings.RpcCode.UNIMPLEMENTED,
-            message="Method not implemented!",
-            details=None
-        )
-
-    def GetAgentCard(self, request, context):
-        """Method for GetAgentCard. Implement your service logic here."""
+    def ListTaskPushNotificationConfigs(self, request, context):
+        """Method for ListTaskPushNotificationConfigs. Implement your service logic here."""
         raise slim_bindings.RpcError.Rpc(
             code=slim_bindings.RpcCode.UNIMPLEMENTED,
             message="Method not implemented!",
@@ -226,6 +237,14 @@ class A2AServiceServicer:
 
     def DeleteTaskPushNotificationConfig(self, request, context):
         """Method for DeleteTaskPushNotificationConfig. Implement your service logic here."""
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
+        )
+
+    def GetExtendedAgentCard(self, request, context):
+        """Method for GetExtendedAgentCard. Implement your service logic here."""
         raise slim_bindings.RpcError.Rpc(
             code=slim_bindings.RpcCode.UNIMPLEMENTED,
             message="Method not implemented!",
@@ -292,6 +311,24 @@ class _A2AServiceServicer_GetTask_Handler:
                 details=None
             )
 
+class _A2AServiceServicer_ListTasks_Handler:
+    def __init__(self, servicer):
+        self.servicer = servicer
+
+    async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
+        try:
+            request_msg = a2a__pb2.ListTasksRequest.FromString(request)
+            response = await self.servicer.ListTasks(request_msg, context)
+            return a2a__pb2.ListTasksResponse.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
+
 class _A2AServiceServicer_CancelTask_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
@@ -310,14 +347,14 @@ class _A2AServiceServicer_CancelTask_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_TaskSubscription_Handler:
+class _A2AServiceServicer_SubscribeToTask_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context, sink: slim_bindings.ResponseSink):
         try:
-            request_msg = a2a__pb2.TaskSubscriptionRequest.FromString(request)
-            response_iter = self.servicer.TaskSubscription(request_msg, context)
+            request_msg = a2a__pb2.SubscribeToTaskRequest.FromString(request)
+            response_iter = self.servicer.SubscribeToTask(request_msg, context)
             async for response in response_iter:
                 await sink.send_async(a2a__pb2.StreamResponse.SerializeToString(response))
             await sink.close_async()
@@ -337,7 +374,7 @@ class _A2AServiceServicer_CreateTaskPushNotificationConfig_Handler:
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
         try:
-            request_msg = a2a__pb2.CreateTaskPushNotificationConfigRequest.FromString(request)
+            request_msg = a2a__pb2.TaskPushNotificationConfig.FromString(request)
             response = await self.servicer.CreateTaskPushNotificationConfig(request_msg, context)
             return a2a__pb2.TaskPushNotificationConfig.SerializeToString(response)
         except slim_bindings.RpcError:
@@ -367,33 +404,15 @@ class _A2AServiceServicer_GetTaskPushNotificationConfig_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_ListTaskPushNotificationConfig_Handler:
+class _A2AServiceServicer_ListTaskPushNotificationConfigs_Handler:
     def __init__(self, servicer):
         self.servicer = servicer
 
     async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
         try:
-            request_msg = a2a__pb2.ListTaskPushNotificationConfigRequest.FromString(request)
-            response = await self.servicer.ListTaskPushNotificationConfig(request_msg, context)
-            return a2a__pb2.ListTaskPushNotificationConfigResponse.SerializeToString(response)
-        except slim_bindings.RpcError:
-            raise
-        except Exception as e:
-            raise slim_bindings.RpcError.Rpc(
-                code=slim_bindings.RpcCode.INTERNAL,
-                message=str(e),
-                details=None
-            )
-
-class _A2AServiceServicer_GetAgentCard_Handler:
-    def __init__(self, servicer):
-        self.servicer = servicer
-
-    async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
-        try:
-            request_msg = a2a__pb2.GetAgentCardRequest.FromString(request)
-            response = await self.servicer.GetAgentCard(request_msg, context)
-            return a2a__pb2.AgentCard.SerializeToString(response)
+            request_msg = a2a__pb2.ListTaskPushNotificationConfigsRequest.FromString(request)
+            response = await self.servicer.ListTaskPushNotificationConfigs(request_msg, context)
+            return a2a__pb2.ListTaskPushNotificationConfigsResponse.SerializeToString(response)
         except slim_bindings.RpcError:
             raise
         except Exception as e:
@@ -421,55 +440,78 @@ class _A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler:
                 details=None
             )
 
+class _A2AServiceServicer_GetExtendedAgentCard_Handler:
+    def __init__(self, servicer):
+        self.servicer = servicer
+
+    async def handle(self, request: bytes, context: slim_bindings.Context) -> bytes:
+        try:
+            request_msg = a2a__pb2.GetExtendedAgentCardRequest.FromString(request)
+            response = await self.servicer.GetExtendedAgentCard(request_msg, context)
+            return a2a__pb2.AgentCard.SerializeToString(response)
+        except slim_bindings.RpcError:
+            raise
+        except Exception as e:
+            raise slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
+
 
 def add_A2AServiceServicer_to_server(servicer, server: slim_bindings.Server):
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
         method_name="SendMessage",
         handler=_A2AServiceServicer_SendMessage_Handler(servicer),
     )
     server.register_unary_stream(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
         method_name="SendStreamingMessage",
         handler=_A2AServiceServicer_SendStreamingMessage_Handler(servicer),
     )
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
         method_name="GetTask",
         handler=_A2AServiceServicer_GetTask_Handler(servicer),
     )
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
+        method_name="ListTasks",
+        handler=_A2AServiceServicer_ListTasks_Handler(servicer),
+    )
+    server.register_unary_unary(
+        service_name="lf.a2a.v1.A2AService",
         method_name="CancelTask",
         handler=_A2AServiceServicer_CancelTask_Handler(servicer),
     )
     server.register_unary_stream(
-        service_name="a2a.v1.A2AService",
-        method_name="TaskSubscription",
-        handler=_A2AServiceServicer_TaskSubscription_Handler(servicer),
+        service_name="lf.a2a.v1.A2AService",
+        method_name="SubscribeToTask",
+        handler=_A2AServiceServicer_SubscribeToTask_Handler(servicer),
     )
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
         method_name="CreateTaskPushNotificationConfig",
         handler=_A2AServiceServicer_CreateTaskPushNotificationConfig_Handler(servicer),
     )
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
         method_name="GetTaskPushNotificationConfig",
         handler=_A2AServiceServicer_GetTaskPushNotificationConfig_Handler(servicer),
     )
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
-        method_name="ListTaskPushNotificationConfig",
-        handler=_A2AServiceServicer_ListTaskPushNotificationConfig_Handler(servicer),
+        service_name="lf.a2a.v1.A2AService",
+        method_name="ListTaskPushNotificationConfigs",
+        handler=_A2AServiceServicer_ListTaskPushNotificationConfigs_Handler(servicer),
     )
     server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
-        method_name="GetAgentCard",
-        handler=_A2AServiceServicer_GetAgentCard_Handler(servicer),
-    )
-    server.register_unary_unary(
-        service_name="a2a.v1.A2AService",
+        service_name="lf.a2a.v1.A2AService",
         method_name="DeleteTaskPushNotificationConfig",
         handler=_A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler(servicer),
+    )
+    server.register_unary_unary(
+        service_name="lf.a2a.v1.A2AService",
+        method_name="GetExtendedAgentCard",
+        handler=_A2AServiceServicer_GetExtendedAgentCard_Handler(servicer),
     )

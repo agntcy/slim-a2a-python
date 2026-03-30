@@ -1,22 +1,20 @@
 import argparse
 import asyncio
 import logging
-from uuid import uuid4
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 import httpx
 from a2a.client import (
     A2ACardResolver,
     Client,
     ClientFactory,
+    create_text_message_object,
     minimal_agent_card,
 )
-from a2a.types import (
-    AgentCard,
-    Message,
-    Part,
-    Role,
-    TextPart,
-)
+from a2a.types.a2a_pb2 import SendMessageRequest
 from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
@@ -24,7 +22,6 @@ from a2a.utils.constants import (
 from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
-    SRPCTransport,
     slimrpc_channel_factory,
 )
 
@@ -33,15 +30,13 @@ BASE_URL = "http://localhost:9999"
 logger = logging.getLogger(__name__)
 
 
-async def fetch_agent_card(resolver: A2ACardResolver) -> AgentCard:
-    agent_card: AgentCard | None = None
+async def fetch_agent_card(resolver: A2ACardResolver) -> object:
+    agent_card = None
 
     try:
         logger.info(f"fetching agent card from: {BASE_URL}{AGENT_CARD_WELL_KNOWN_PATH}")
         agent_card = await resolver.get_agent_card()
-        logger.info(
-            f"fetched agent card: {agent_card.model_dump_json(indent=2, exclude_none=True)}",
-        )
+        logger.info(f"fetched agent card: {agent_card}")
 
     except Exception as e:
         logger.error(f"failed fetching public agent card: {e}", exc_info=True)
@@ -65,17 +60,24 @@ async def main() -> None:
     )
 
     client_config = ClientConfig(
-        supported_transports=["JSONRPC", "slimrpc"],
+        supported_protocol_bindings=["slimrpc"],
         streaming=args.stream,
         httpx_client=httpx_client,
         slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
     )
     client_factory = ClientFactory(client_config)
 
-    # mypy: the register API expects a different callable type; safe to ignore here.
-    client_factory.register("slimrpc", SRPCTransport.create)  # type: ignore
+    if args.a2a_version == "v0":
+        from slima2a.compat.v3_0.client_transport import SRPCCompatTransport
 
-    agent_card: AgentCard
+        # mypy: the register API expects a different callable type; safe to ignore here.
+        client_factory.register("slimrpc", SRPCCompatTransport.create)  # type: ignore
+    else:
+        from slima2a.client_transport import SRPCTransport
+
+        # mypy: the register API expects a different callable type; safe to ignore here.
+        client_factory.register("slimrpc", SRPCTransport.create)  # type: ignore
+
     match args.type:
         case "slimrpc":
             agent_card = minimal_agent_card("agntcy/demo/echo_agent", ["slimrpc"])
@@ -123,6 +125,13 @@ def parse_arguments() -> argparse.Namespace:
         required=False,
         default="slimrpc",
     )
+    parser.add_argument(
+        "--a2a-version",
+        type=str,
+        required=False,
+        default="v1",
+        choices=["v0", "v1"],
+    )
 
     args = parser.parse_args()
 
@@ -136,33 +145,30 @@ async def send_message(
     client: Client,
     text: str,
 ) -> str:
-    request_id = str(uuid4())
-    request = Message(
-        role=Role.user,
-        message_id=request_id,
-        parts=[Part(root=TextPart(text=text))],
-    )
-    logger.info(f"associated request ({request_id}) with text: {text}")
+    message = create_text_message_object(content=text)
+    request = SendMessageRequest(message=message)
 
     output = ""
     try:
-        async for event in client.send_message(request=request):
-            if isinstance(event, Message):
-                for part in event.parts:
-                    if isinstance(part.root, TextPart):
-                        output += part.root.text
-            else:
-                task, update = event
-                logger.info(f"task ({task.id}) status: {task.status.state}")
-
-                if task.status.state == "completed" and task.artifacts:
-                    for artifact in task.artifacts:
-                        for part in artifact.parts:
-                            if isinstance(part.root, TextPart):
-                                output += part.root.text
-
-                if update:
-                    logger.info(f"update: {update.model_dump(mode='json')}")
+        async for stream_response, task in client.send_message(request=request):
+            which = stream_response.WhichOneof("payload")
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "task":
+                if task:
+                    logger.info(f"task ({task.id}) status: {task.status.state}")
+                    if task.artifacts:
+                        for artifact in task.artifacts:
+                            for part in artifact.parts:
+                                if part.WhichOneof("content") == "text":
+                                    output += part.text
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
     except Exception as e:
         logger.error(
             f"failed sending message or processing response: {e}",

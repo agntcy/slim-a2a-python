@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+# ruff: noqa: N802
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterable, Callable
 
@@ -11,18 +12,35 @@ from a2a.extensions.common import (
     HTTP_EXTENSION_HEADER,
     get_requested_extensions,
 )
-from a2a.grpc import a2a_pb2
 from a2a.server.context import ServerCallContext
 from a2a.server.request_handlers.request_handler import RequestHandler
-from a2a.types import AgentCard, TaskNotFoundError
+from a2a.types import a2a_pb2
+from a2a.types.a2a_pb2 import AgentCard
 from a2a.utils import proto_utils
-from a2a.utils.errors import ServerError
+from a2a.utils.errors import A2AError, TaskNotFoundError
 from a2a.utils.helpers import validate, validate_async_generator
+from google.protobuf import empty_pb2
 from google.rpc import code_pb2
 
-from slima2a.types import a2a_pb2_slimrpc
+from slima2a.types.v1 import a2a_pb2_slimrpc
 
 SlimRPCError = slim_bindings.RpcError.Rpc  # type: ignore[attr-defined]
+
+_SLIM_ERROR_CODE_MAP = {
+    types.InvalidRequestError: code_pb2.INVALID_ARGUMENT,
+    types.MethodNotFoundError: code_pb2.NOT_FOUND,
+    types.InvalidParamsError: code_pb2.INVALID_ARGUMENT,
+    types.InternalError: code_pb2.INTERNAL,
+    types.TaskNotFoundError: code_pb2.NOT_FOUND,
+    types.TaskNotCancelableError: code_pb2.FAILED_PRECONDITION,
+    types.PushNotificationNotSupportedError: code_pb2.UNIMPLEMENTED,
+    types.UnsupportedOperationError: code_pb2.UNIMPLEMENTED,
+    types.ContentTypeNotSupportedError: code_pb2.INVALID_ARGUMENT,
+    types.InvalidAgentResponseError: code_pb2.INTERNAL,
+    types.ExtendedAgentCardNotConfiguredError: code_pb2.FAILED_PRECONDITION,
+    types.ExtensionSupportRequiredError: code_pb2.FAILED_PRECONDITION,
+    types.VersionNotSupportedError: code_pb2.UNIMPLEMENTED,
+}
 
 
 class CallContextBuilder(ABC):
@@ -31,6 +49,11 @@ class CallContextBuilder(ABC):
     @abstractmethod
     def build(self, context: slim_bindings.Context) -> ServerCallContext:
         """Builds a ServerCallContext from a SlimRPC Request."""
+
+
+def get_metadata_value(context: slim_bindings.Context, key: str) -> str:
+    """Extract metadata value from slim_bindings context."""
+    return context.metadata().get(key, "")
 
 
 class DefaultCallContextBuilder(CallContextBuilder):
@@ -49,14 +72,8 @@ class DefaultCallContextBuilder(CallContextBuilder):
         )
 
 
-def get_metadata_value(context: slim_bindings.Context, key: str) -> str:
-    """Extract metadata value from slim_bindings context."""
-
-    return context.metadata().get(HTTP_EXTENSION_HEADER, "")
-
-
 class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
-    """Maps incoming sRPC requests to the appropriate request handler method."""
+    """Maps incoming SlimRPC requests to the appropriate request handler method."""
 
     def __init__(
         self,
@@ -65,50 +82,53 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
         context_builder: CallContextBuilder | None = None,
         card_modifier: Callable[[AgentCard], AgentCard] | None = None,
     ) -> None:
-        """Initializes the SrpcHandler.
+        """Initializes the SRPCHandler.
 
         Args:
-            agent_card: The AgentCard describing the agent's capabilities.
-            request_handler: The underlying `RequestHandler` instance to
-                             delegate requests to.
+            agent_card: The AgentCard describing the agent's capabilities (v1.0 proto).
+            request_handler: The underlying v1.0 RequestHandler instance.
             context_builder: The CallContextBuilder object. If none the
                              DefaultCallContextBuilder is used.
-            card_modifier: An optional callback to dynamically modify the public
-              agent card before it is served.
+            card_modifier: An optional callback to dynamically modify the agent card.
         """
         self.agent_card = agent_card
         self.request_handler = request_handler
         self.context_builder = context_builder or DefaultCallContextBuilder()
         self.card_modifier = card_modifier
 
+    def _build_call_context(
+        self,
+        context: slim_bindings.Context,
+        request: object,
+    ) -> ServerCallContext:
+        server_context = self.context_builder.build(context)
+        server_context.tenant = getattr(request, "tenant", "")
+        return server_context
+
+    async def raise_error_response(self, error: A2AError) -> None:
+        """Raises SlimRPC errors appropriately."""
+        code = _SLIM_ERROR_CODE_MAP.get(type(error), code_pb2.UNKNOWN)
+        raise SlimRPCError(
+            code=code,
+            message=f"{type(error).__name__}: {error.message}",
+            details=None,
+        )
+
     async def SendMessage(
         self,
         request: a2a_pb2.SendMessageRequest,
         context: slim_bindings.Context,
     ) -> a2a_pb2.SendMessageResponse:
-        """Handles the 'SendMessage' gRPC method.
-
-        Args:
-            request: The incoming `SendMessageRequest` object.
-            context: Context provided by the server.
-
-        Returns:
-            A `SendMessageResponse` object containing the result (Task or
-            Message) or throws an error response if a `ServerError` is raised
-            by the handler.
-        """
+        """Handles the 'SendMessage' SlimRPC method."""
         try:
-            # Construct the server context object
-            server_context = self.context_builder.build(context)
-            # Transform the proto object to the python internal objects
-            a2a_request = proto_utils.FromProto.message_send_params(
-                request,
-            )
+            server_context = self._build_call_context(context, request)
             task_or_message = await self.request_handler.on_message_send(
-                a2a_request, server_context
+                request, server_context
             )
-            return proto_utils.ToProto.task_or_message(task_or_message)
-        except ServerError as e:
+            if isinstance(task_or_message, a2a_pb2.Task):
+                return a2a_pb2.SendMessageResponse(task=task_or_message)
+            return a2a_pb2.SendMessageResponse(message=task_or_message)
+        except A2AError as e:
             await self.raise_error_response(e)
         return a2a_pb2.SendMessageResponse()
 
@@ -121,31 +141,14 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
         request: a2a_pb2.SendMessageRequest,
         context: slim_bindings.Context,
     ) -> AsyncIterable[a2a_pb2.StreamResponse]:
-        """Handles the 'StreamMessage' gRPC method.
-
-        Yields response objects as they are produced by the underlying handler's
-        stream.
-
-        Args:
-            request: The incoming `SendMessageRequest` object.
-            context: Context provided by the server.
-
-        Yields:
-            `StreamResponse` objects containing streaming events
-            (Task, Message, TaskStatusUpdateEvent, TaskArtifactUpdateEvent)
-            or gRPC error responses if a `ServerError` is raised.
-        """
-        server_context = self.context_builder.build(context)
-        # Transform the proto object to the python internal objects
-        a2a_request = proto_utils.FromProto.message_send_params(
-            request,
-        )
+        """Handles the 'SendStreamingMessage' SlimRPC method."""
+        server_context = self._build_call_context(context, request)
         try:
             async for event in self.request_handler.on_message_send_stream(
-                a2a_request, server_context
+                request, server_context
             ):
-                yield proto_utils.ToProto.stream_response(event)
-        except ServerError as e:
+                yield proto_utils.to_stream_response(event)
+        except A2AError as e:
             await self.raise_error_response(e)
         return
 
@@ -154,25 +157,14 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
         request: a2a_pb2.CancelTaskRequest,
         context: slim_bindings.Context,
     ) -> a2a_pb2.Task:
-        """Handles the 'CancelTask' gRPC method.
-
-        Args:
-            request: The incoming `CancelTaskRequest` object.
-            context: Context provided by the server.
-
-        Returns:
-            A `Task` object containing the updated Task or a gRPC error.
-        """
+        """Handles the 'CancelTask' SlimRPC method."""
         try:
-            server_context = self.context_builder.build(context)
-            task_id_params = proto_utils.FromProto.task_id_params(request)
-            task = await self.request_handler.on_cancel_task(
-                task_id_params, server_context
-            )
+            server_context = self._build_call_context(context, request)
+            task = await self.request_handler.on_cancel_task(request, server_context)
             if task:
-                return proto_utils.ToProto.task(task)
-            await self.raise_error_response(ServerError(error=TaskNotFoundError()))
-        except ServerError as e:
+                return task
+            await self.raise_error_response(TaskNotFoundError())
+        except A2AError as e:
             await self.raise_error_response(e)
         return a2a_pb2.Task()
 
@@ -180,55 +172,62 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
         lambda self: self.agent_card.capabilities.streaming,
         "Streaming is not supported by the agent",
     )
-    async def TaskSubscription(
+    async def SubscribeToTask(
         self,
-        request: a2a_pb2.TaskSubscriptionRequest,
+        request: a2a_pb2.SubscribeToTaskRequest,
         context: slim_bindings.Context,
     ) -> AsyncIterable[a2a_pb2.StreamResponse]:
-        """Handles the 'TaskSubscription' gRPC method.
-
-        Yields response objects as they are produced by the underlying handler's
-        stream.
-
-        Args:
-            request: The incoming `TaskSubscriptionRequest` object.
-            context: Context provided by the server.
-
-        Yields:
-            `StreamResponse` objects containing streaming events
-        """
+        """Handles the 'SubscribeToTask' SlimRPC method."""
         try:
-            server_context = self.context_builder.build(context)
-            async for event in self.request_handler.on_resubscribe_to_task(
-                proto_utils.FromProto.task_id_params(request),
-                server_context,
+            server_context = self._build_call_context(context, request)
+            async for event in self.request_handler.on_subscribe_to_task(
+                request, server_context
             ):
-                yield proto_utils.ToProto.stream_response(event)
-        except ServerError as e:
+                yield proto_utils.to_stream_response(event)
+        except A2AError as e:
             await self.raise_error_response(e)
+
+    async def GetTask(
+        self,
+        request: a2a_pb2.GetTaskRequest,
+        context: slim_bindings.Context,
+    ) -> a2a_pb2.Task:
+        """Handles the 'GetTask' SlimRPC method."""
+        try:
+            server_context = self._build_call_context(context, request)
+            task = await self.request_handler.on_get_task(request, server_context)
+            if task:
+                return task
+            await self.raise_error_response(TaskNotFoundError())
+        except A2AError as e:
+            await self.raise_error_response(e)
+        return a2a_pb2.Task()
+
+    async def ListTasks(
+        self,
+        request: a2a_pb2.ListTasksRequest,
+        context: slim_bindings.Context,
+    ) -> a2a_pb2.ListTasksResponse:
+        """Handles the 'ListTasks' SlimRPC method."""
+        try:
+            server_context = self._build_call_context(context, request)
+            return await self.request_handler.on_list_tasks(request, server_context)
+        except A2AError as e:
+            await self.raise_error_response(e)
+        return a2a_pb2.ListTasksResponse()
 
     async def GetTaskPushNotificationConfig(
         self,
         request: a2a_pb2.GetTaskPushNotificationConfigRequest,
         context: slim_bindings.Context,
     ) -> a2a_pb2.TaskPushNotificationConfig:
-        """Handles the 'GetTaskPushNotificationConfig' gRPC method.
-
-        Args:
-            request: The incoming `GetTaskPushNotificationConfigRequest` object.
-            context: Context provided by the server.
-
-        Returns:
-            A `TaskPushNotificationConfig` object containing the config.
-        """
+        """Handles the 'GetTaskPushNotificationConfig' SlimRPC method."""
         try:
-            server_context = self.context_builder.build(context)
-            config = await self.request_handler.on_get_task_push_notification_config(
-                proto_utils.FromProto.task_id_params(request),
-                server_context,
+            server_context = self._build_call_context(context, request)
+            return await self.request_handler.on_get_task_push_notification_config(
+                request, server_context
             )
-            return proto_utils.ToProto.task_push_notification_config(config)
-        except ServerError as e:
+        except A2AError as e:
             await self.raise_error_response(e)
         return a2a_pb2.TaskPushNotificationConfig()
 
@@ -238,146 +237,57 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
     )
     async def CreateTaskPushNotificationConfig(
         self,
-        request: a2a_pb2.CreateTaskPushNotificationConfigRequest,
+        request: a2a_pb2.TaskPushNotificationConfig,
         context: slim_bindings.Context,
     ) -> a2a_pb2.TaskPushNotificationConfig:
-        """Handles the 'CreateTaskPushNotificationConfig' gRPC method.
-
-        Requires the agent to support push notifications.
-
-        Args:
-            request: The incoming `CreateTaskPushNotificationConfigRequest` object.
-            context: Context provided by the server.
-
-        Returns:
-            A `TaskPushNotificationConfig` object
-
-        Raises:
-            ServerError: If push notifications are not supported by the agent
-                (due to the `@validate` decorator).
-        """
+        """Handles the 'CreateTaskPushNotificationConfig' SlimRPC method."""
         try:
-            server_context = self.context_builder.build(context)
-            config = await self.request_handler.on_set_task_push_notification_config(
-                proto_utils.FromProto.task_push_notification_config_request(
-                    request,
-                ),
-                server_context,
+            server_context = self._build_call_context(context, request)
+            return await self.request_handler.on_create_task_push_notification_config(
+                request, server_context
             )
-            return proto_utils.ToProto.task_push_notification_config(config)
-        except ServerError as e:
+        except A2AError as e:
             await self.raise_error_response(e)
         return a2a_pb2.TaskPushNotificationConfig()
 
-    async def GetTask(
+    async def ListTaskPushNotificationConfigs(
         self,
-        request: a2a_pb2.GetTaskRequest,
+        request: a2a_pb2.ListTaskPushNotificationConfigsRequest,
         context: slim_bindings.Context,
-    ) -> a2a_pb2.Task:
-        """Handles the 'GetTask' gRPC method.
-
-        Args:
-            request: The incoming `GetTaskRequest` object.
-            context: Context provided by the server.
-
-        Returns:
-            A `Task` object.
-        """
+    ) -> a2a_pb2.ListTaskPushNotificationConfigsResponse:
+        """Handles the 'ListTaskPushNotificationConfigs' SlimRPC method."""
         try:
-            server_context = self.context_builder.build(context)
-            task = await self.request_handler.on_get_task(
-                proto_utils.FromProto.task_query_params(request), server_context
+            server_context = self._build_call_context(context, request)
+            return await self.request_handler.on_list_task_push_notification_configs(
+                request, server_context
             )
-            if task:
-                return proto_utils.ToProto.task(task)
-            await self.raise_error_response(ServerError(error=TaskNotFoundError()))
-        except ServerError as e:
+        except A2AError as e:
             await self.raise_error_response(e)
-        return a2a_pb2.Task()
+        return a2a_pb2.ListTaskPushNotificationConfigsResponse()
 
-    async def GetAgentCard(
+    async def DeleteTaskPushNotificationConfig(
         self,
-        request: a2a_pb2.GetAgentCardRequest,
+        request: a2a_pb2.DeleteTaskPushNotificationConfigRequest,
+        context: slim_bindings.Context,
+    ) -> empty_pb2.Empty:
+        """Handles the 'DeleteTaskPushNotificationConfig' SlimRPC method."""
+        try:
+            server_context = self._build_call_context(context, request)
+            await self.request_handler.on_delete_task_push_notification_config(
+                request, server_context
+            )
+            return empty_pb2.Empty()
+        except A2AError as e:
+            await self.raise_error_response(e)
+        return empty_pb2.Empty()
+
+    async def GetExtendedAgentCard(
+        self,
+        request: a2a_pb2.GetExtendedAgentCardRequest,
         context: slim_bindings.Context,
     ) -> a2a_pb2.AgentCard:
-        """Get the agent card for the agent served."""
+        """Get the extended agent card for the agent served."""
         card_to_serve = self.agent_card
         if self.card_modifier:
             card_to_serve = self.card_modifier(card_to_serve)
-        return proto_utils.ToProto.agent_card(card_to_serve)
-
-    async def raise_error_response(self, error: ServerError) -> None:
-        """Raises SlimRPC errors appropriately."""
-        match error.error:
-            case types.JSONParseError():
-                raise SlimRPCError(
-                    code=code_pb2.INTERNAL,
-                    message=f"JSONParseError: {error.error.message}",
-                    details=None,
-                )
-            case types.InvalidRequestError():
-                raise SlimRPCError(
-                    code=code_pb2.INVALID_ARGUMENT,
-                    message=f"InvalidRequestError: {error.error.message}",
-                    details=None,
-                )
-            case types.MethodNotFoundError():
-                raise SlimRPCError(
-                    code=code_pb2.NOT_FOUND,
-                    message=f"MethodNotFoundError: {error.error.message}",
-                    details=None,
-                )
-            case types.InvalidParamsError():
-                raise SlimRPCError(
-                    code=code_pb2.INVALID_ARGUMENT,
-                    message=f"InvalidParamsError: {error.error.message}",
-                    details=None,
-                )
-            case types.InternalError():
-                raise SlimRPCError(
-                    code=code_pb2.INTERNAL,
-                    message=f"InternalError: {error.error.message}",
-                    details=None,
-                )
-            case types.TaskNotFoundError():
-                raise SlimRPCError(
-                    code=code_pb2.NOT_FOUND,
-                    message=f"TaskNotFoundError: {error.error.message}",
-                    details=None,
-                )
-            case types.TaskNotCancelableError():
-                raise SlimRPCError(
-                    code=code_pb2.UNIMPLEMENTED,
-                    message=f"TaskNotCancelableError: {error.error.message}",
-                    details=None,
-                )
-            case types.PushNotificationNotSupportedError():
-                raise SlimRPCError(
-                    code=code_pb2.UNIMPLEMENTED,
-                    message=f"PushNotificationNotSupportedError: {error.error.message}",
-                    details=None,
-                )
-            case types.UnsupportedOperationError():
-                raise SlimRPCError(
-                    code=code_pb2.UNIMPLEMENTED,
-                    message=f"UnsupportedOperationError: {error.error.message}",
-                    details=None,
-                )
-            case types.ContentTypeNotSupportedError():
-                raise SlimRPCError(
-                    code=code_pb2.UNIMPLEMENTED,
-                    message=f"ContentTypeNotSupportedError: {error.error.message}",
-                    details=None,
-                )
-            case types.InvalidAgentResponseError():
-                raise SlimRPCError(
-                    code=code_pb2.INTERNAL,
-                    message=f"InvalidAgentResponseError: {error.error.message}",
-                    details=None,
-                )
-            case _:
-                raise SlimRPCError(
-                    code=code_pb2.UNKNOWN,
-                    message=f"Unknown error type: {error.error}",
-                    details=None,
-                )
+        return card_to_serve

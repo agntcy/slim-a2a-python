@@ -12,6 +12,22 @@ vars:
   UV_ARGS: '{{.UV_ARGS | default ""}}'
 
 tasks:
+  generate-v0:
+    desc: "Generate v0.3 SlimRPC bindings from A2A proto"
+    cmds:
+      - buf generate --template buf.gen.v0.yaml
+
+  generate-v1:
+    desc: "Generate v1.0 SlimRPC bindings from A2A proto"
+    cmds:
+      - buf generate --template buf.gen.v1.yaml
+
+  generate:
+    desc: "Generate all SlimRPC bindings (v0.3 and v1.0)"
+    cmds:
+      - task: generate-v0
+      - task: generate-v1
+
   fix-lint:
     desc: "Lint and fix (where possible) code style and formatting issues using ruff and mypy"
     cmds:
