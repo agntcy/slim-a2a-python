@@ -44,7 +44,7 @@ class EchoAgentExecutor(AgentExecutor):
             parts=[Part(text=result)],
         )
         await task_updater.add_artifact(
-            parts=response.parts,
+            parts=list(response.parts),
             name="result",
         )
         await task_updater.complete(message=response)

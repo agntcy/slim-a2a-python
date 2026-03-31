@@ -44,7 +44,7 @@ class TravelPlannerAgentExecutor(AgentExecutor):
         status = TaskStatusUpdateEvent(
             context_id=context.context_id,  # type: ignore
             task_id=context.task_id,  # type: ignore
-            status=TaskStatus(state=TaskState.completed),
+            status=TaskStatus(state=TaskState.TASK_STATE_COMPLETED),
             final=True,
         )
         await event_queue.enqueue_event(status)

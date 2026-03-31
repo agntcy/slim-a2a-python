@@ -14,7 +14,7 @@ from a2a.client import (
     create_text_message_object,
     minimal_agent_card,
 )
-from a2a.types.a2a_pb2 import SendMessageRequest
+from a2a.types.a2a_pb2 import AgentCard, SendMessageRequest
 from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
@@ -30,7 +30,7 @@ BASE_URL = "http://localhost:9999"
 logger = logging.getLogger(__name__)
 
 
-async def fetch_agent_card(resolver: A2ACardResolver) -> object:
+async def fetch_agent_card(resolver: A2ACardResolver) -> AgentCard:
     agent_card = None
 
     try:
