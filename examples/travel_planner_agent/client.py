@@ -83,6 +83,7 @@ async def main() -> None:
         namespace="agntcy",
         group="demo",
         name="client",
+        secret="my_shared_secret_for_testing_purposes_only",
     )
 
     client_config = ClientConfig(

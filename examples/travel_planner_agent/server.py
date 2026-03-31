@@ -56,6 +56,7 @@ async def main() -> None:
         namespace="agntcy",
         group="demo",
         name="travel_planner_agent",
+        secret="my_shared_secret_for_testing_purposes_only",
     )
 
     # Create server
