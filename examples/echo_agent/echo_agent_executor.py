@@ -3,7 +3,7 @@ import logging
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks.task_updater import TaskUpdater
-from a2a.types import Message, Part, Role, TextPart
+from a2a.types import Message, Part, Role
 
 from examples.echo_agent.echo_agent import EchoAgent
 
@@ -33,18 +33,18 @@ class EchoAgentExecutor(AgentExecutor):
         )
         await task_updater.submit(message=context.message)
 
-        if type(context.message.parts[0].root) is not TextPart:
+        if context.message.parts[0].WhichOneof("content") != "text":
             raise Exception("only text parts are supported")
 
-        result = await self.agent.invoke(context.message.parts[0].root.text)
+        result = await self.agent.invoke(context.message.parts[0].text)
 
         response = Message(
-            role=Role.agent,
+            role=Role.ROLE_AGENT,
             message_id=context.message.message_id,
-            parts=[Part(root=TextPart(text=result))],
+            parts=[Part(text=result)],
         )
         await task_updater.add_artifact(
-            parts=response.parts,
+            parts=list(response.parts),
             name="result",
         )
         await task_updater.complete(message=response)

@@ -1,6 +1,9 @@
 import asyncio
 import logging
-from uuid import uuid4
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 # Disable a2a telemetry debugging before any a2a imports
 logging.getLogger("a2a.utils.telemetry").setLevel(logging.ERROR)
@@ -11,14 +14,10 @@ import httpx
 from a2a.client import (
     Client,
     ClientFactory,
+    create_text_message_object,
     minimal_agent_card,
 )
-from a2a.types import (
-    Message,
-    Part,
-    Role,
-    TextPart,
-)
+from a2a.types.a2a_pb2 import SendMessageRequest
 
 from slima2a import setup_slim_client
 from slima2a.client_transport import (
@@ -44,28 +43,28 @@ async def interact_with_server(client: Client) -> None:
             print("bye!~")
             break
 
-        request_id = str(uuid4())
-        request = Message(
-            role=Role.user,
-            message_id=request_id,
-            parts=[Part(root=TextPart(text=user_input))],
-        )
+        message = create_text_message_object(content=user_input)
+        request = SendMessageRequest(message=message)
 
         output = ""
         try:
-            async for response in client.send_message(request=request):
-                if isinstance(response, Message):
-                    for part in response.parts:
-                        if isinstance(part.root, TextPart):
-                            output += part.root.text
-                else:
-                    task, _ = response
-
-                    if task.status.state == "completed" and task.artifacts:
+            async for stream_response, task in client.send_message(request=request):
+                which = stream_response.WhichOneof("payload")
+                if which == "message":
+                    for part in stream_response.message.parts:
+                        if part.WhichOneof("content") == "text":
+                            output += part.text
+                elif which == "task":
+                    if task and task.artifacts:
                         for artifact in task.artifacts:
                             for part in artifact.parts:
-                                if isinstance(part.root, TextPart):
-                                    output += part.root.text
+                                if part.WhichOneof("content") == "text":
+                                    output += part.text
+                elif which == "artifact_update":
+                    artifact = stream_response.artifact_update.artifact
+                    for part in artifact.parts:
+                        if part.WhichOneof("content") == "text":
+                            output += part.text
 
         except Exception as e:
             raise RuntimeError("failed sending message or processing response") from e
@@ -84,10 +83,11 @@ async def main() -> None:
         namespace="agntcy",
         group="demo",
         name="client",
+        secret="my_shared_secret_for_testing_purposes_only",
     )
 
     client_config = ClientConfig(
-        supported_transports=["JSONRPC", "slimrpc"],
+        supported_protocol_bindings=["slimrpc"],
         streaming=True,
         httpx_client=httpx_client,
         slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),

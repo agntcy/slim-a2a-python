@@ -7,27 +7,30 @@ from dataclasses import dataclass
 from typing import Callable
 
 import slim_bindings
+from a2a.client.client import ClientCallContext
 from a2a.client.client import ClientConfig as A2AClientConfig
-from a2a.client.middleware import ClientCallContext, ClientCallInterceptor
 from a2a.client.transports.base import ClientTransport
-from a2a.extensions.common import HTTP_EXTENSION_HEADER
-from a2a.grpc import a2a_pb2
-from a2a.types import (
+from a2a.types.a2a_pb2 import (
     AgentCard,
-    GetTaskPushNotificationConfigParams,
-    Message,
-    MessageSendParams,
+    CancelTaskRequest,
+    DeleteTaskPushNotificationConfigRequest,
+    GetExtendedAgentCardRequest,
+    GetTaskPushNotificationConfigRequest,
+    GetTaskRequest,
+    ListTaskPushNotificationConfigsRequest,
+    ListTaskPushNotificationConfigsResponse,
+    ListTasksRequest,
+    ListTasksResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    StreamResponse,
+    SubscribeToTaskRequest,
     Task,
-    TaskArtifactUpdateEvent,
-    TaskIdParams,
     TaskPushNotificationConfig,
-    TaskQueryParams,
-    TaskStatusUpdateEvent,
 )
-from a2a.utils import proto_utils
 from a2a.utils.telemetry import SpanKind, trace_class
 
-from slima2a.types import a2a_pb2_slimrpc
+from slima2a.types.v1 import a2a_pb2_slimrpc
 
 logger = logging.getLogger(__name__)
 
@@ -62,20 +65,17 @@ class ClientConfig(A2AClientConfig):
 
 @trace_class(kind=SpanKind.CLIENT)
 class SRPCTransport(ClientTransport):
-    """A gRPC transport for the A2A client."""
+    """A SlimRPC transport for the A2A client."""
 
     def __init__(
         self,
         channel: slim_bindings.Channel,
         agent_card: AgentCard | None,
     ) -> None:
-        """Initializes the GrpcTransport."""
+        """Initializes the SRPCTransport."""
         self.agent_card = agent_card
         self.channel = channel
         self.stub = a2a_pb2_slimrpc.A2AServiceStub(channel)
-        self._needs_extended_card = (
-            agent_card.supports_authenticated_extended_card if agent_card else True
-        )
 
     @classmethod
     def create(
@@ -83,184 +83,116 @@ class SRPCTransport(ClientTransport):
         card: AgentCard,
         url: str,
         config: ClientConfig,
-        interceptors: list[ClientCallInterceptor],
     ) -> "SRPCTransport":
-        """Creates a gRPC transport for the A2A client."""
+        """Creates a SlimRPC transport for the A2A client."""
         if config.slimrpc_channel_factory is None:
             raise ValueError("slimrpc_channel_factory is required when using sRPC")
         channel = config.slimrpc_channel_factory(url)
-        return cls(
-            channel,
-            card,
-        )
+        return cls(channel, card)
 
     async def send_message(
         self,
-        request: MessageSendParams,
+        request: SendMessageRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
-    ) -> Task | Message:
+    ) -> SendMessageResponse:
         """Sends a non-streaming message request to the agent."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        response = await self.stub.SendMessage(
-            a2a_pb2.SendMessageRequest(
-                request=proto_utils.ToProto.message(request.message),
-                configuration=proto_utils.ToProto.message_send_configuration(
-                    request.configuration
-                ),
-                metadata=proto_utils.ToProto.metadata(request.metadata),
-            ),
-            metadata=metadata,
-        )
-        if response.HasField("task"):
-            return proto_utils.FromProto.task(response.task)
-        return proto_utils.FromProto.message(response.msg)
+        return await self.stub.SendMessage(request)
 
     async def send_message_streaming(
         self,
-        request: MessageSendParams,
+        request: SendMessageRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
-    ) -> AsyncGenerator[
-        Message | Task | TaskStatusUpdateEvent | TaskArtifactUpdateEvent, None
-    ]:
+    ) -> AsyncGenerator[StreamResponse, None]:
         """Sends a streaming message request to the agent and yields responses as they arrive."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        stream = self.stub.SendStreamingMessage(
-            a2a_pb2.SendMessageRequest(
-                request=proto_utils.ToProto.message(request.message),
-                configuration=proto_utils.ToProto.message_send_configuration(
-                    request.configuration
-                ),
-                metadata=proto_utils.ToProto.metadata(request.metadata),
-            ),
-            metadata=metadata,
-        )
-        async for response in stream:
-            yield proto_utils.FromProto.stream_response(response)
+        async for response in self.stub.SendStreamingMessage(request):
+            yield response
 
-    async def resubscribe(
+    async def subscribe(
         self,
-        request: TaskIdParams,
+        request: SubscribeToTaskRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
-    ) -> AsyncGenerator[
-        Task | Message | TaskStatusUpdateEvent | TaskArtifactUpdateEvent, None
-    ]:
+    ) -> AsyncGenerator[StreamResponse, None]:
         """Reconnects to get task updates."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        stream = self.stub.TaskSubscription(
-            a2a_pb2.TaskSubscriptionRequest(name=f"tasks/{request.id}"),
-            metadata=metadata,
-        )
-        async for response in stream:
-            yield proto_utils.FromProto.stream_response(response)
+        async for response in self.stub.SubscribeToTask(request):
+            yield response
 
     async def get_task(
         self,
-        request: TaskQueryParams,
+        request: GetTaskRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
     ) -> Task:
         """Retrieves the current state and history of a specific task."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        task = await self.stub.GetTask(
-            a2a_pb2.GetTaskRequest(name=f"tasks/{request.id}"), metadata=metadata
-        )
-        return proto_utils.FromProto.task(task)
+        return await self.stub.GetTask(request)
+
+    async def list_tasks(
+        self,
+        request: ListTasksRequest,
+        *,
+        context: ClientCallContext | None = None,
+    ) -> ListTasksResponse:
+        """Retrieves tasks for an agent."""
+        return await self.stub.ListTasks(request)
 
     async def cancel_task(
         self,
-        request: TaskIdParams,
+        request: CancelTaskRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
     ) -> Task:
         """Requests the agent to cancel a specific task."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        task = await self.stub.CancelTask(
-            a2a_pb2.CancelTaskRequest(name=f"tasks/{request.id}"), metadata=metadata
-        )
-        return proto_utils.FromProto.task(task)
+        return await self.stub.CancelTask(request)
 
-    async def set_task_callback(
+    async def create_task_push_notification_config(
         self,
         request: TaskPushNotificationConfig,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
     ) -> TaskPushNotificationConfig:
         """Sets or updates the push notification configuration for a specific task."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        config = await self.stub.CreateTaskPushNotificationConfig(
-            a2a_pb2.CreateTaskPushNotificationConfigRequest(
-                parent=f"tasks/{request.task_id}",
-                config_id=request.push_notification_config.id,
-                config=proto_utils.ToProto.task_push_notification_config(request),
-            ),
-            metadata=metadata,
-        )
-        return proto_utils.FromProto.task_push_notification_config(config)
+        return await self.stub.CreateTaskPushNotificationConfig(request)
 
-    async def get_task_callback(
+    async def get_task_push_notification_config(
         self,
-        request: GetTaskPushNotificationConfigParams,
+        request: GetTaskPushNotificationConfigRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
     ) -> TaskPushNotificationConfig:
         """Retrieves the push notification configuration for a specific task."""
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        config = await self.stub.GetTaskPushNotificationConfig(
-            a2a_pb2.GetTaskPushNotificationConfigRequest(
-                name=f"tasks/{request.id}/pushNotificationConfigs/{request.push_notification_config_id}",
-            ),
-            metadata=metadata,
-        )
-        return proto_utils.FromProto.task_push_notification_config(config)
+        return await self.stub.GetTaskPushNotificationConfig(request)
 
-    async def get_card(
+    async def list_task_push_notification_configs(
         self,
+        request: ListTaskPushNotificationConfigsRequest,
         *,
         context: ClientCallContext | None = None,
-        extensions: list[str] | None = None,
-    ) -> AgentCard:
-        """Retrieves the agent's card."""
-        card = self.agent_card
-        if card and not self._needs_extended_card:
-            return card
-        if card is None and not self._needs_extended_card:
-            raise ValueError("Agent card is not available.")
+    ) -> ListTaskPushNotificationConfigsResponse:
+        """Lists push notification configurations for a specific task."""
+        return await self.stub.ListTaskPushNotificationConfigs(request)
 
-        metadata = {}
-        if extensions:
-            metadata[HTTP_EXTENSION_HEADER] = ",".join(extensions)
-        card_pb = await self.stub.GetAgentCard(
-            a2a_pb2.GetAgentCardRequest(),
-            metadata=metadata,
-        )
-        card = proto_utils.FromProto.agent_card(card_pb)
-        self.agent_card = card
-        self._needs_extended_card = False
-        return card
+    async def delete_task_push_notification_config(
+        self,
+        request: DeleteTaskPushNotificationConfigRequest,
+        *,
+        context: ClientCallContext | None = None,
+    ) -> None:
+        """Deletes the push notification configuration for a specific task."""
+        await self.stub.DeleteTaskPushNotificationConfig(request)
+
+    async def get_extended_agent_card(
+        self,
+        request: GetExtendedAgentCardRequest,
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AgentCard:
+        """Retrieves the agent's extended card."""
+        card = self.agent_card
+        if card and not card.capabilities.extended_agent_card:
+            return card
+        return await self.stub.GetExtendedAgentCard(request)
 
     async def close(self) -> None:
         """Closes the transport and releases any resources."""

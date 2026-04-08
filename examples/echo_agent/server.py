@@ -1,22 +1,23 @@
 import argparse
 import asyncio
 import logging
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 import slim_bindings
-import uvicorn
-from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
-from a2a.types import (
+from a2a.types.a2a_pb2 import (
     AgentCapabilities,
     AgentCard,
+    AgentInterface,
     AgentSkill,
 )
 
 from examples.echo_agent.echo_agent_executor import EchoAgentExecutor
 from slima2a import setup_slim_client
-from slima2a.handler import SRPCHandler
-from slima2a.types.a2a_pb2_slimrpc import add_A2AServiceServicer_to_server
 
 
 async def main() -> None:
@@ -35,7 +36,9 @@ async def main() -> None:
     agent_card = AgentCard(
         name="Echo Agent",
         description="Just a simple echo agent that returns the received prompt",
-        url="http://localhost:9999/",
+        supported_interfaces=[
+            AgentInterface(url="http://localhost:9999/", protocol_binding="JSONRPC")
+        ],
         version="1.0.0",
         default_input_modes=["text"],
         default_output_modes=["text"],
@@ -50,16 +53,14 @@ async def main() -> None:
         task_store=task_store,
     )
 
-    servicer: SRPCHandler | A2AStarletteApplication
     match args.type:
         case "slimrpc":
-            servicer = SRPCHandler(agent_card, default_request_handler)
-
             # Initialize and connect to SLIM
             service, local_app, local_name, conn_id = await setup_slim_client(
                 namespace="agntcy",
                 group="demo",
                 name="echo_agent",
+                secret="my_shared_secret_for_testing_purposes_only",
             )
 
             # Create server
@@ -67,14 +68,30 @@ async def main() -> None:
                 local_app, local_name, conn_id
             )
 
-            add_A2AServiceServicer_to_server(
-                servicer,
-                server,
-            )
+            if args.a2a_version in ("v0", "both"):
+                from slima2a.compat.v3_0.handler import SRPCCompatHandler
+                from slima2a.types.v0.a2a_pb2_slimrpc import (
+                    add_A2AServiceServicer_to_server as add_v0,
+                )
+
+                compat_handler = SRPCCompatHandler(agent_card, default_request_handler)
+                add_v0(compat_handler, server)
+
+            if args.a2a_version in ("v1", "both"):
+                from slima2a.handler import SRPCHandler
+                from slima2a.types.v1.a2a_pb2_slimrpc import (
+                    add_A2AServiceServicer_to_server as add_v1,
+                )
+
+                handler = SRPCHandler(agent_card, default_request_handler)
+                add_v1(handler, server)
 
             # Run server
             await server.serve_async()
         case "starlette":
+            import uvicorn
+            from a2a.server.apps import A2AStarletteApplication
+
             servicer = A2AStarletteApplication(
                 agent_card=agent_card,
                 http_handler=default_request_handler,
@@ -95,6 +112,14 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         required=False,
         default="ERROR",
+    )
+
+    parser.add_argument(
+        "--a2a-version",
+        type=str,
+        required=False,
+        default="v1",
+        choices=["v0", "v1", "both"],
     )
 
     args = parser.parse_args()
