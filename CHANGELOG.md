@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/agntcy/slim-a2a-python/compare/v0.3.0...v0.4.0) (2026-04-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* upgrade to a2a-sdk v1.0.0-alpha.0 with v0.3 compat layer
+
+### Features
+
+* upgrade to a2a-sdk v1.0.0-alpha.0 with v0.3 compat layer ([1645561](https://github.com/agntcy/slim-a2a-python/commit/164556128d5566f825d9f737adf0d99f8d74fc1e))
+
 ## [0.3.0](https://github.com/agntcy/slim-a2a-python/compare/v0.2.3...v0.3.0) (2026-02-17)
 
 
