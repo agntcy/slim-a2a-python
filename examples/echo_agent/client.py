@@ -10,7 +10,6 @@ import httpx
 from a2a.client import (
     A2ACardResolver,
     Client,
-    ClientFactory,
     create_text_message_object,
     minimal_agent_card,
 )
@@ -22,7 +21,10 @@ from a2a.utils.constants import (
 from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
+    MulticastClient,
+    SRPCClientFactory,
     slimrpc_channel_factory,
+    slimrpc_group_channel_factory,
 )
 
 BASE_URL = "http://localhost:9999"
@@ -65,23 +67,22 @@ async def main() -> None:
         streaming=args.stream,
         httpx_client=httpx_client,
         slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
+        slimrpc_group_channel_factory=slimrpc_group_channel_factory(
+            slim_local_app, conn_id
+        ),
     )
-    client_factory = ClientFactory(client_config)
+    client_factory = SRPCClientFactory(client_config)
 
     if args.a2a_version == "v0":
         from slima2a.compat.v3_0.client_transport import SRPCCompatTransport
 
-        # mypy: the register API expects a different callable type; safe to ignore here.
         client_factory.register("slimrpc", SRPCCompatTransport.create)  # type: ignore
-    else:
-        from slima2a.client_transport import SRPCTransport
 
-        # mypy: the register API expects a different callable type; safe to ignore here.
-        client_factory.register("slimrpc", SRPCTransport.create)  # type: ignore
+    agent_names = [f"agntcy/demo/{name.strip()}" for name in args.agents.split(",")]
 
     match args.type:
         case "slimrpc":
-            agent_card = minimal_agent_card("agntcy/demo/echo_agent", ["slimrpc"])
+            agent_card = minimal_agent_card(",".join(agent_names), ["slimrpc"])
         case "starlette":
             agent_card = await fetch_agent_card(
                 resolver=A2ACardResolver(
@@ -93,11 +94,15 @@ async def main() -> None:
             raise ValueError(f"Invalid client type: {args.type}")
 
     client = client_factory.create(card=agent_card)
-    logger.info("A2AClient initialized.")
 
-    response_text = await send_message(client, args.text)
-    print(f"> {args.text}")
-    print(response_text)
+    if isinstance(client, MulticastClient):
+        print(f"> {args.text} (multicast to {agent_names})")
+        await send_message_multicast(client, args.text)
+    else:
+        logger.info("A2AClient initialized.")
+        response_text = await send_message(client, args.text)
+        print(f"> {args.text}")
+        print(response_text)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -132,6 +137,13 @@ def parse_arguments() -> argparse.Namespace:
         required=False,
         default="v1",
         choices=["v0", "v1"],
+    )
+    parser.add_argument(
+        "--agents",
+        type=str,
+        required=False,
+        default="echo_agent",
+        help="Comma-separated agent names (e.g. echo_agent_1,echo_agent_2). Multiple names triggers multicast.",
     )
 
     args = parser.parse_args()
@@ -178,6 +190,42 @@ async def send_message(
         raise RuntimeError("failed sending message or processing response") from e
 
     return output
+
+
+async def send_message_multicast(
+    client: MulticastClient,
+    text: str,
+) -> None:
+    message = create_text_message_object(content=text)
+    request = SendMessageRequest(message=message)
+
+    try:
+        async for source, response in client.send_message(request):
+            output = ""
+            which = response.WhichOneof("payload")
+            if which == "message":
+                for part in response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "task":
+                if response.task.artifacts:
+                    for artifact in response.task.artifacts:
+                        for part in artifact.parts:
+                            if part.WhichOneof("content") == "text":
+                                output += part.text
+            elif which == "artifact_update":
+                artifact = response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            if output:
+                print(f"  [{source}] {output}")
+    except Exception as e:
+        logger.error(
+            f"failed sending multicast message: {e}",
+            exc_info=True,
+        )
+        raise RuntimeError("failed sending multicast message") from e
 
 
 if __name__ == "__main__":
