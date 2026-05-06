@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import contextlib
 import logging
 import sys
 from pathlib import Path
@@ -59,7 +60,7 @@ async def main() -> None:
             service, local_app, local_name, conn_id = await setup_slim_client(
                 namespace="agntcy",
                 group="demo",
-                name="echo_agent",
+                name=args.name,
                 secret="my_shared_secret_for_testing_purposes_only",
             )
 
@@ -106,6 +107,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--type", type=str, required=False, default="slimrpc")
+    parser.add_argument("--name", type=str, required=False, default="echo_agent")
 
     parser.add_argument(
         "--log-level",
@@ -131,4 +133,5 @@ def parse_arguments() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    with contextlib.suppress(KeyboardInterrupt):
+        asyncio.run(main())

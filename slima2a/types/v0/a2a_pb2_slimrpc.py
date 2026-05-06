@@ -149,6 +149,204 @@ class A2AServiceStub:
 
 
 
+class A2AServiceGroupStub:
+    """Multicast (group) client stub for A2AService.
+
+    Requires a channel created with ``Channel.new_group*`` targeting multiple
+    server instances. All methods are async generators that yield
+    ``(source, response)`` tuples — one pair per incoming message.
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A slim_bindings.Channel created with Channel.new_group*.
+        """
+        self._channel = channel
+
+    async def SendMessage(self, request: a2a__pb2.SendMessageRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast SendMessage: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "SendMessage",
+            a2a__pb2.SendMessageRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.SendMessageResponse.FromString(msg.item.message)
+
+    async def SendStreamingMessage(self, request: a2a__pb2.SendMessageRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast SendStreamingMessage: streaming responses per server."""
+        reader = await self._channel.call_multicast_unary_stream_async(
+            "a2a.v1.A2AService",
+            "SendStreamingMessage",
+            a2a__pb2.SendMessageRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.StreamResponse.FromString(msg.item.message)
+
+    async def GetTask(self, request: a2a__pb2.GetTaskRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast GetTask: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "GetTask",
+            a2a__pb2.GetTaskRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.Task.FromString(msg.item.message)
+
+    async def CancelTask(self, request: a2a__pb2.CancelTaskRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast CancelTask: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "CancelTask",
+            a2a__pb2.CancelTaskRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.Task.FromString(msg.item.message)
+
+    async def TaskSubscription(self, request: a2a__pb2.TaskSubscriptionRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast TaskSubscription: streaming responses per server."""
+        reader = await self._channel.call_multicast_unary_stream_async(
+            "a2a.v1.A2AService",
+            "TaskSubscription",
+            a2a__pb2.TaskSubscriptionRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.StreamResponse.FromString(msg.item.message)
+
+    async def CreateTaskPushNotificationConfig(self, request: a2a__pb2.CreateTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast CreateTaskPushNotificationConfig: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "CreateTaskPushNotificationConfig",
+            a2a__pb2.CreateTaskPushNotificationConfigRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.TaskPushNotificationConfig.FromString(msg.item.message)
+
+    async def GetTaskPushNotificationConfig(self, request: a2a__pb2.GetTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast GetTaskPushNotificationConfig: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "GetTaskPushNotificationConfig",
+            a2a__pb2.GetTaskPushNotificationConfigRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.TaskPushNotificationConfig.FromString(msg.item.message)
+
+    async def ListTaskPushNotificationConfig(self, request: a2a__pb2.ListTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast ListTaskPushNotificationConfig: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "ListTaskPushNotificationConfig",
+            a2a__pb2.ListTaskPushNotificationConfigRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.ListTaskPushNotificationConfigResponse.FromString(msg.item.message)
+
+    async def GetAgentCard(self, request: a2a__pb2.GetAgentCardRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast GetAgentCard: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "GetAgentCard",
+            a2a__pb2.GetAgentCardRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, a2a__pb2.AgentCard.FromString(msg.item.message)
+
+    async def DeleteTaskPushNotificationConfig(self, request: a2a__pb2.DeleteTaskPushNotificationConfigRequest, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None):
+        """Multicast DeleteTaskPushNotificationConfig: one response per server."""
+        reader = await self._channel.call_multicast_unary_async(
+            "a2a.v1.A2AService",
+            "DeleteTaskPushNotificationConfig",
+            a2a__pb2.DeleteTaskPushNotificationConfigRequest.SerializeToString(request),
+            timeout,
+            metadata,
+        )
+        while True:
+            msg = await reader.next_async()
+            if msg.is_end():
+                break
+            if msg.is_error():
+                raise msg.error
+            if msg.is_data():
+                yield msg.item.context, google__protobuf__empty_pb2.Empty.FromString(msg.item.message)
+
+
+
 class A2AServiceServicer:
     """Server servicer for A2AService. Implement this class to provide your service logic."""
 
