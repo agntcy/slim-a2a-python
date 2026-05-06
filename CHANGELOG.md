@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/agntcy/slim-a2a-python/compare/v0.4.0...v0.5.0) (2026-05-06)
+
+
+### Features
+
+* add slimrpc multicast support with unified client factory ([#18](https://github.com/agntcy/slim-a2a-python/issues/18)) ([2b58616](https://github.com/agntcy/slim-a2a-python/commit/2b586164012acbb66e8437ffdc7483528a908697)), closes [#17](https://github.com/agntcy/slim-a2a-python/issues/17)
+
 ## [0.4.0](https://github.com/agntcy/slim-a2a-python/compare/v0.3.0...v0.4.0) (2026-04-08)
 
 
