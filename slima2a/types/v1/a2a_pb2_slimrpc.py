@@ -470,7 +470,7 @@ class A2AServiceServicer:
 
 
 
-class _A2AServiceServicer_SendMessage_Handler:
+class _A2AServiceServicer_SendMessage_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -488,7 +488,7 @@ class _A2AServiceServicer_SendMessage_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_SendStreamingMessage_Handler:
+class _A2AServiceServicer_SendStreamingMessage_Handler(slim_bindings.UnaryStreamHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -509,7 +509,7 @@ class _A2AServiceServicer_SendStreamingMessage_Handler:
             )
             await sink.send_error_async(rpc_error)
 
-class _A2AServiceServicer_GetTask_Handler:
+class _A2AServiceServicer_GetTask_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -527,7 +527,7 @@ class _A2AServiceServicer_GetTask_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_ListTasks_Handler:
+class _A2AServiceServicer_ListTasks_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -545,7 +545,7 @@ class _A2AServiceServicer_ListTasks_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_CancelTask_Handler:
+class _A2AServiceServicer_CancelTask_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -563,7 +563,7 @@ class _A2AServiceServicer_CancelTask_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_SubscribeToTask_Handler:
+class _A2AServiceServicer_SubscribeToTask_Handler(slim_bindings.UnaryStreamHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -584,7 +584,7 @@ class _A2AServiceServicer_SubscribeToTask_Handler:
             )
             await sink.send_error_async(rpc_error)
 
-class _A2AServiceServicer_CreateTaskPushNotificationConfig_Handler:
+class _A2AServiceServicer_CreateTaskPushNotificationConfig_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -602,7 +602,7 @@ class _A2AServiceServicer_CreateTaskPushNotificationConfig_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_GetTaskPushNotificationConfig_Handler:
+class _A2AServiceServicer_GetTaskPushNotificationConfig_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -620,7 +620,7 @@ class _A2AServiceServicer_GetTaskPushNotificationConfig_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_ListTaskPushNotificationConfigs_Handler:
+class _A2AServiceServicer_ListTaskPushNotificationConfigs_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -638,7 +638,7 @@ class _A2AServiceServicer_ListTaskPushNotificationConfigs_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_GetExtendedAgentCard_Handler:
+class _A2AServiceServicer_GetExtendedAgentCard_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
@@ -656,7 +656,7 @@ class _A2AServiceServicer_GetExtendedAgentCard_Handler:
                 details=None
             )
 
-class _A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler:
+class _A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler(slim_bindings.UnaryUnaryHandler):
     def __init__(self, servicer):
         self.servicer = servicer
 
