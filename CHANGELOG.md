@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/agntcy/slim-a2a-python/compare/v0.5.0...v0.6.0) (2026-06-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* require slim-bindings >=1.4,<2
+
+### Features
+
+* support slim-bindings 1.4.x. The SLIMRPC code generator now emits server handler classes that subclass the strict slim-bindings RPC handler traits (`UnaryUnaryHandler`, `UnaryStreamHandler`, `StreamUnaryHandler`, `StreamStreamHandler`), fixing `TypeError: Expected UnaryUnaryHandler subclass` raised by `add_*Servicer_to_server()` against slim-bindings 1.4.x. The dependency constraint is bumped from `slim-bindings~=1.1` to `slim-bindings>=1.4,<2`.
+
 ## [0.5.0](https://github.com/agntcy/slim-a2a-python/compare/v0.4.0...v0.5.0) (2026-05-06)
 
 
