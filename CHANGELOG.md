@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/agntcy/slim-a2a-python/compare/v0.5.0...v0.6.0) (2026-06-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* require slim-bindings >=1.4,<2 ([#23](https://github.com/agntcy/slim-a2a-python/issues/23))
+
+### Features
+
+* require slim-bindings &gt;=1.4,&lt;2 ([#23](https://github.com/agntcy/slim-a2a-python/issues/23)) ([70b09b5](https://github.com/agntcy/slim-a2a-python/commit/70b09b53c5c70a55bfaf9848fadaf308580e0065))
+* update code to support bindings version 1.4&lt; ([#21](https://github.com/agntcy/slim-a2a-python/issues/21)) ([9e88d84](https://github.com/agntcy/slim-a2a-python/commit/9e88d841162c86e15a298d5f11d7d39b4b10af1f))
+
 ## [0.6.0](https://github.com/agntcy/slim-a2a-python/compare/v0.5.0...v0.6.0) (2026-06-10)
 
 
