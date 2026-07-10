@@ -52,6 +52,7 @@ async def main() -> None:
     default_request_handler = DefaultRequestHandler(
         agent_executor=agent_executor,
         task_store=task_store,
+        agent_card=agent_card,
     )
 
     match args.type:
@@ -91,14 +92,23 @@ async def main() -> None:
             await server.serve_async()
         case "starlette":
             import uvicorn
-            from a2a.server.apps import A2AStarletteApplication
-
-            servicer = A2AStarletteApplication(
-                agent_card=agent_card,
-                http_handler=default_request_handler,
+            from a2a.server.routes import (
+                create_agent_card_routes,
+                create_jsonrpc_routes,
             )
+            from starlette.applications import Starlette
 
-            uvicorn.run(servicer.build(), host="0.0.0.0", port=9999)
+            routes = create_agent_card_routes(agent_card=agent_card)
+            routes += create_jsonrpc_routes(
+                request_handler=default_request_handler,
+                rpc_url="/",
+            )
+            app = Starlette(routes=routes)
+
+            # main() already runs inside asyncio.run(), so use the awaitable
+            # uvicorn Server API instead of the blocking uvicorn.run().
+            config = uvicorn.Config(app, host="0.0.0.0", port=9999)
+            await uvicorn.Server(config).serve()
         case _:
             raise ValueError(f"Invalid server type: {args.type}")
 

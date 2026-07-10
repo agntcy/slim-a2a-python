@@ -267,9 +267,8 @@ class MultiAgentClientFactory(ClientFactory):
     def __init__(
         self,
         config: ClientConfig,
-        consumers: list | None = None,
     ) -> None:
-        super().__init__(config, consumers)
+        super().__init__(config)
         self._config: ClientConfig = config
         self._multiagent_labels: set[str] = set()
         self.register("slimrpc", SRPCTransport.create, multiagent=True)  # type: ignore[arg-type]
@@ -287,14 +286,13 @@ class MultiAgentClientFactory(ClientFactory):
     def create(  # type: ignore[override]
         self,
         card: AgentCard | list[AgentCard],
-        consumers: list | None = None,
         interceptors: list | None = None,
     ) -> "Client | MulticastClient":
         if not isinstance(card, list):
-            return super().create(card, consumers, interceptors)
+            return super().create(card, interceptors)
 
         if len(card) == 1:
-            return super().create(card[0], consumers, interceptors)
+            return super().create(card[0], interceptors)
 
         protocol = self._find_common_multiagent_protocol(card)
         producer = self._registry[protocol]
