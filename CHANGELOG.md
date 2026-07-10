@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/agntcy/slim-a2a-python/compare/v0.6.0...v0.6.1) (2026-07-10)
+
+
+### Features
+
+* Bump a2a-python version ([#24](https://github.com/agntcy/slim-a2a-python/issues/24)) ([c2ba5cb](https://github.com/agntcy/slim-a2a-python/commit/c2ba5cb779bd009e9fc0c2a3ae6572935b5ea2f3))
+
 ## [0.6.0](https://github.com/agntcy/slim-a2a-python/compare/v0.5.0...v0.6.0) (2026-06-15)
 
 
