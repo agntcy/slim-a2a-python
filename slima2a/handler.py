@@ -13,12 +13,11 @@ from a2a.extensions.common import (
     get_requested_extensions,
 )
 from a2a.server.context import ServerCallContext
-from a2a.server.request_handlers.request_handler import RequestHandler
+from a2a.server.request_handlers.request_handler import RequestHandler, validate
 from a2a.types import a2a_pb2
 from a2a.types.a2a_pb2 import AgentCard
 from a2a.utils import proto_utils
 from a2a.utils.errors import A2AError, TaskNotFoundError
-from a2a.utils.helpers import validate, validate_async_generator
 from google.protobuf import empty_pb2
 from google.rpc import code_pb2
 
@@ -132,7 +131,7 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
             await self.raise_error_response(e)
         return a2a_pb2.SendMessageResponse()
 
-    @validate_async_generator(
+    @validate(
         lambda self: self.agent_card.capabilities.streaming,
         "Streaming is not supported by the agent",
     )
@@ -168,7 +167,7 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
             await self.raise_error_response(e)
         return a2a_pb2.Task()
 
-    @validate_async_generator(
+    @validate(
         lambda self: self.agent_card.capabilities.streaming,
         "Streaming is not supported by the agent",
     )

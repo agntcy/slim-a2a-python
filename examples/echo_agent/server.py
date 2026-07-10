@@ -52,6 +52,7 @@ async def main() -> None:
     default_request_handler = DefaultRequestHandler(
         agent_executor=agent_executor,
         task_store=task_store,
+        agent_card=agent_card,
     )
 
     match args.type:

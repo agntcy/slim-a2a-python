@@ -10,10 +10,10 @@ import httpx
 from a2a.client import (
     A2ACardResolver,
     Client,
-    create_text_message_object,
     minimal_agent_card,
 )
-from a2a.types.a2a_pb2 import AgentCard, SendMessageRequest
+from a2a.helpers import new_text_message
+from a2a.types.a2a_pb2 import AgentCard, Role, SendMessageRequest
 from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
@@ -160,25 +160,25 @@ async def send_message(
     client: Client,
     text: str,
 ) -> str:
-    message = create_text_message_object(content=text)
+    message = new_text_message(text, role=Role.ROLE_USER)
     request = SendMessageRequest(message=message)
 
     output = ""
     try:
-        async for stream_response, task in client.send_message(request=request):
+        async for stream_response in client.send_message(request=request):
             which = stream_response.WhichOneof("payload")
             if which == "message":
                 for part in stream_response.message.parts:
                     if part.WhichOneof("content") == "text":
                         output += part.text
             elif which == "task":
-                if task:
-                    logger.info(f"task ({task.id}) status: {task.status.state}")
-                    if task.artifacts:
-                        for artifact in task.artifacts:
-                            for part in artifact.parts:
-                                if part.WhichOneof("content") == "text":
-                                    output += part.text
+                task = stream_response.task
+                logger.info(f"task ({task.id}) status: {task.status.state}")
+                if task.artifacts:
+                    for artifact in task.artifacts:
+                        for part in artifact.parts:
+                            if part.WhichOneof("content") == "text":
+                                output += part.text
             elif which == "artifact_update":
                 artifact = stream_response.artifact_update.artifact
                 for part in artifact.parts:
@@ -198,7 +198,7 @@ async def send_message_multicast(
     client: MulticastClient,
     text: str,
 ) -> None:
-    message = create_text_message_object(content=text)
+    message = new_text_message(text, role=Role.ROLE_USER)
     request = SendMessageRequest(message=message)
 
     try:

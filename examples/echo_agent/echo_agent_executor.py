@@ -1,5 +1,6 @@
 import logging
 
+from a2a.helpers import new_task_from_user_message
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks.task_updater import TaskUpdater
@@ -26,12 +27,18 @@ class EchoAgentExecutor(AgentExecutor):
 
         logging.debug(f"received message: {context.message}")
 
+        # The V2 request handler requires an initial Task to be enqueued
+        # before any status/artifact update events are emitted.
+        task = context.current_task
+        if task is None:
+            task = new_task_from_user_message(context.message)
+            await event_queue.enqueue_event(task)
+
         task_updater = TaskUpdater(
             event_queue=event_queue,
-            task_id=context.message.task_id,
-            context_id=context.message.context_id,
+            task_id=task.id,
+            context_id=task.context_id,
         )
-        await task_updater.submit(message=context.message)
 
         if context.message.parts[0].WhichOneof("content") != "text":
             raise Exception("only text parts are supported")

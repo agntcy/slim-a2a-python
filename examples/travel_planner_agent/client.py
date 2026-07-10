@@ -14,10 +14,10 @@ import httpx
 from a2a.client import (
     Client,
     ClientFactory,
-    create_text_message_object,
     minimal_agent_card,
 )
-from a2a.types.a2a_pb2 import SendMessageRequest
+from a2a.helpers import new_text_message
+from a2a.types.a2a_pb2 import Role, SendMessageRequest
 
 from slima2a import setup_slim_client
 from slima2a.client_transport import (
@@ -43,19 +43,20 @@ async def interact_with_server(client: Client) -> None:
             print("bye!~")
             break
 
-        message = create_text_message_object(content=user_input)
+        message = new_text_message(user_input, role=Role.ROLE_USER)
         request = SendMessageRequest(message=message)
 
         output = ""
         try:
-            async for stream_response, task in client.send_message(request=request):
+            async for stream_response in client.send_message(request=request):
                 which = stream_response.WhichOneof("payload")
                 if which == "message":
                     for part in stream_response.message.parts:
                         if part.WhichOneof("content") == "text":
                             output += part.text
                 elif which == "task":
-                    if task and task.artifacts:
+                    task = stream_response.task
+                    if task.artifacts:
                         for artifact in task.artifacts:
                             for part in artifact.parts:
                                 if part.WhichOneof("content") == "text":

@@ -49,6 +49,7 @@ async def main() -> None:
     request_handler = DefaultRequestHandler(
         agent_executor=TravelPlannerAgentExecutor(),
         task_store=InMemoryTaskStore(),
+        agent_card=agent_card,
     )
 
     # Initialize and connect to SLIM
