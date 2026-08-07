@@ -8,8 +8,8 @@ from google.rpc import code_pb2 as code__pb2
 
 import slim_bindings
 
-import google.protobuf.empty_pb2 as google__protobuf__empty_pb2
 from a2a.compat.v0_3 import a2a_v0_3_pb2 as a2a__pb2
+import google.protobuf.empty_pb2 as google__protobuf__empty_pb2
 
 
 class A2AServiceStub:
