@@ -280,6 +280,36 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
             await self.raise_error_response(e)
         return empty_pb2.Empty()
 
+    async def SendLiveMessage(
+        self,
+        request_stream: slim_bindings.RequestStream,
+        context: slim_bindings.Context,
+        sink: slim_bindings.ResponseSink,
+    ) -> AsyncIterable[a2a_pb2.StreamResponse]:
+        """Handles the 'SendLiveMessage' SlimRPC bidi streaming method."""
+        server_context = self.context_builder.build(context)
+
+        async def _decoded_stream() -> AsyncIterable[a2a_pb2.StreamRequest]:
+            while True:
+                msg = await request_stream.next_async()
+                if msg.is_end():
+                    break
+                if msg.is_error():
+                    raise msg[0]
+                if msg.is_data():
+                    req = a2a_pb2.StreamRequest.FromString(msg[0])
+                    if not server_context.tenant:
+                        server_context.tenant = req.tenant
+                    yield req
+
+        try:
+            async for event in self.request_handler.on_live_message_send(
+                _decoded_stream(), server_context
+            ):
+                yield event
+        except A2AError as e:
+            await self.raise_error_response(e)
+
     async def GetExtendedAgentCard(
         self,
         request: a2a_pb2.GetExtendedAgentCardRequest,

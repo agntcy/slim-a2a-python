@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
@@ -241,6 +242,31 @@ class SRPCTransport(ClientTransport):
         if card and not card.capabilities.extended_agent_card:
             return card
         return await self.stub.GetExtendedAgentCard(request)
+
+    async def send_live_message(
+        self,
+        request_stream: "AsyncGenerator[Any, None]",
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AsyncGenerator[StreamResponse, None]:
+        """Sends a bidirectional streaming live message request to the agent."""
+        bidi = self.stub.SendLiveMessage()
+        async def _send():
+            async for req in request_stream:
+                await bidi.send_async(req.SerializeToString())
+            await bidi.close_send_async()
+        send_task = asyncio.ensure_future(_send())
+        try:
+            while True:
+                msg = await bidi.recv_async()
+                if msg.is_end():
+                    break
+                if msg.is_error():
+                    raise msg[0]
+                if msg.is_data():
+                    yield StreamResponse.FromString(msg[0])
+        finally:
+            await send_task
 
     async def close(self) -> None:
         """Closes the transport and releases any resources."""

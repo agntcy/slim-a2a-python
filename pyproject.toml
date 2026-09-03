@@ -8,7 +8,7 @@ description = "A2A protocol over slimrpc"
 readme = "README.md"
 requires-python = ">=3.10, <4.0"
 dependencies = [
-    "a2a-sdk[telemetry,sqlite]==1.1.0",
+    "a2a-sdk[telemetry,sqlite]",
     "slim-bindings~=2.0",
 ]
 classifiers = [
@@ -44,6 +44,9 @@ examples = [
 # Default groups to install when running `uv sync`
 [tool.uv]
 default-groups = ["linting", "testing", "examples"]
+
+[tool.uv.sources]
+a2a-sdk = { git = "https://github.com/Tehsmash/a2a-python", branch = "feat/send-live-message" }
 
 [tool.ruff.format]
 exclude = ["*_pb2.py", "*_pb2.pyi", "*_pb2_slimrpc.py"]

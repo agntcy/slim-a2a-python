@@ -13,7 +13,7 @@ from a2a.client import (
     minimal_agent_card,
 )
 from a2a.helpers import new_text_message
-from a2a.types.a2a_pb2 import AgentCard, Role, SendMessageRequest
+from a2a.types.a2a_pb2 import AgentCard, Role, SendMessageRequest, StreamRequest
 from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
@@ -100,6 +100,10 @@ async def main() -> None:
     if isinstance(client, MulticastClient):
         print(f"> {args.text} (multicast to {agent_names})")
         await send_message_multicast(client, args.text)
+    elif args.live:
+        logger.info("A2AClient initialized.")
+        print(f"> {args.text} (live)")
+        await send_live_message(client, args.text)
     else:
         logger.info("A2AClient initialized.")
         response_text = await send_message(client, args.text)
@@ -121,6 +125,13 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         required=False,
         default=False,
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Use SendLiveMessage bidirectional streaming",
     )
     parser.add_argument(
         "--text",
@@ -228,6 +239,32 @@ async def send_message_multicast(
             exc_info=True,
         )
         raise RuntimeError("failed sending multicast message") from e
+
+
+async def send_live_message(client: Client, text: str) -> None:
+    message = new_text_message(text, role=Role.ROLE_USER)
+
+    async def _requests():
+        yield StreamRequest(message=message)
+
+    output = ""
+    try:
+        async for stream_response in client.send_live_message(_requests()):
+            which = stream_response.WhichOneof("payload")
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+    except Exception as e:
+        logger.error(f"failed sending live message: {e}", exc_info=True)
+        raise RuntimeError("failed sending live message") from e
+
+    print(output)
 
 
 if __name__ == "__main__":
