@@ -1,5 +1,7 @@
 # SLIMA2A
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/agntcy/slim-a2a-python/badge)](https://scorecard.dev/viewer/?uri=github.com/agntcy/slim-a2a-python)
+
 SLIMA2A is a SLIM transport for A2A using slim's RPC protocol (srpc). It allows
 agents to communicate over the SLIM network using the A2A protocol, using SLIM
 identities for authentication and addressing.
