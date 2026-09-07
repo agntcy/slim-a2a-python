@@ -382,6 +382,14 @@ class A2AServiceGroupStub:
             if msg.is_data():
                 yield msg.item.context, google__protobuf__empty_pb2.Empty.FromString(msg.item.message)
 
+    def SendLiveMessage(self, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> slim_bindings.MulticastBidiStreamHandler:
+        """Open a bidirectional streaming SendLiveMessage call to all group members."""
+        return self._channel.call_multicast_stream_stream(
+            "lf.a2a.v1.A2AService",
+            "SendLiveMessage",
+            timeout,
+            metadata,
+        )
 
 
 class A2AServiceServicer:

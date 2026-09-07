@@ -473,6 +473,34 @@ class SRPCMulticastTransport:
         async for source, response in self.stub.GetExtendedAgentCard(request):
             yield source, response
 
+    async def send_live_message(
+        self,
+        request_stream: "AsyncGenerator[Any, None]",
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AsyncGenerator[tuple[Any, StreamResponse], None]:
+        """Sends a bidirectional streaming live message to all agents in the group.
+
+        Yields (source, StreamResponse) tuples as events arrive from any agent.
+        """
+        bidi = self.stub.SendLiveMessage()
+        async def _send():
+            async for req in request_stream:
+                await bidi.send_async(req.SerializeToString())
+            await bidi.close_send_async()
+        send_task = asyncio.ensure_future(_send())
+        try:
+            while True:
+                msg = await bidi.recv_async()
+                if msg.is_end():
+                    break
+                if msg.is_error():
+                    raise msg.error
+                if msg.is_data():
+                    yield msg.item.context, StreamResponse.FromString(msg.item.message)
+        finally:
+            await send_task
+
     async def close(self) -> None:
         """Closes the transport and releases any resources."""
         pass
@@ -645,6 +673,22 @@ class MulticastClient:
     ) -> AsyncGenerator[tuple[Any, AgentCard], None]:
         async for source, response in self._transport.get_extended_agent_card(
             request, context=context
+        ):
+            yield source, response
+
+    async def send_live_message(
+        self,
+        request_stream: "AsyncGenerator[Any, None]",
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AsyncGenerator[tuple[Any, StreamResponse], None]:
+        """Sends a bidirectional streaming live message to all agents in the group.
+
+        Yields (source, StreamResponse) tuples as events arrive from any agent.
+        Use ``source`` to demultiplex per-agent.
+        """
+        async for source, response in self._transport.send_live_message(
+            request_stream, context=context
         ):
             yield source, response
 
