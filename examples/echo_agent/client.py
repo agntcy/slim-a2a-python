@@ -18,7 +18,7 @@ from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
 
-from slima2a import setup_slim_client
+from slima2a import setup_slim_client, slimrpc_group_shared_channel_factory
 from slima2a.client_transport import (
     ClientConfig,
     MultiAgentClientFactory,
@@ -62,12 +62,18 @@ async def main() -> None:
         secret="my_shared_secret_for_testing_purposes_only",
     )
 
+    group_factory = (
+        slimrpc_group_shared_channel_factory(slim_local_app, conn_id)
+        if args.broadcast
+        else slimrpc_group_channel_factory(slim_local_app, conn_id)
+    )
     client_config = ClientConfig(
         supported_protocol_bindings=["slimrpc"],
         streaming=args.stream,
         httpx_client=httpx_client,
         slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
-        slimrpc_group_channel_factory=slimrpc_group_channel_factory(
+        slimrpc_group_channel_factory=group_factory,
+        slimrpc_group_shared_channel_factory=slimrpc_group_shared_channel_factory(
             slim_local_app, conn_id
         ),
     )
@@ -97,7 +103,10 @@ async def main() -> None:
 
     client = client_factory.create(card=cards)
 
-    if isinstance(client, MulticastClient):
+    if isinstance(client, MulticastClient) and args.broadcast:
+        print(f"> {args.text} (broadcast live to {agent_names})")
+        await send_live_message_broadcast(client, args.text)
+    elif isinstance(client, MulticastClient):
         print(f"> {args.text} (multicast to {agent_names})")
         await send_message_multicast(client, args.text)
     elif args.live:
@@ -132,6 +141,13 @@ def parse_arguments() -> argparse.Namespace:
         required=False,
         default=False,
         help="Use SendLiveMessage bidirectional streaming",
+    )
+    parser.add_argument(
+        "--broadcast",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Use broadcast SendLiveMessage (shared-responses) — requires multiple --agents",
     )
     parser.add_argument(
         "--text",
@@ -265,6 +281,32 @@ async def send_live_message(client: Client, text: str) -> None:
         raise RuntimeError("failed sending live message") from e
 
     print(output)
+
+
+async def send_live_message_broadcast(client: MulticastClient, text: str) -> None:
+    message = new_text_message(text, role=Role.ROLE_USER)
+
+    async def _requests():
+        yield StreamRequest(message=message)
+
+    try:
+        async for source, stream_response in client.send_live_message(_requests()):
+            which = stream_response.WhichOneof("payload")
+            output = ""
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            if output:
+                print(f"  [{source}] {output}")
+    except Exception as e:
+        logger.error(f"failed sending broadcast live message: {e}", exc_info=True)
+        raise RuntimeError("failed sending broadcast live message") from e
 
 
 if __name__ == "__main__":

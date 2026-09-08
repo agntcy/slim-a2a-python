@@ -3,6 +3,7 @@
 
 """SLIMA2A - A2A protocol over slimrpc."""
 
+from slima2a.client_transport import slimrpc_group_shared_channel_factory
 from slima2a.slim_helper import (
     connect_and_subscribe,
     initialize_slim_service,
@@ -13,4 +14,5 @@ __all__ = [
     "connect_and_subscribe",
     "initialize_slim_service",
     "setup_slim_client",
+    "slimrpc_group_shared_channel_factory",
 ]

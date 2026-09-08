@@ -47,6 +47,7 @@ default-groups = ["linting", "testing", "examples"]
 
 [tool.uv.sources]
 a2a-sdk = { git = "https://github.com/Tehsmash/a2a-python", branch = "feat/send-live-message" }
+slim-bindings = { path = "../slim-bindings/python", editable = true }
 
 [tool.ruff.format]
 exclude = ["*_pb2.py", "*_pb2.pyi", "*_pb2_slimrpc.py"]
