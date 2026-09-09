@@ -44,19 +44,8 @@ def slimrpc_channel_factory(
     conn_id: int,
 ) -> Callable[[str], slim_bindings.Channel]:
     def factory(remote: str) -> slim_bindings.Channel:
-        # Parse the remote name from the URL
-        remote_parts = remote.split("/")
-        if len(remote_parts) != 3:
-            raise ValueError(
-                f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
-            )
-
-        remote_name = slim_bindings.Name(
-            remote_parts[0], remote_parts[1], remote_parts[2]
-        )
-
         return slim_bindings.Channel.new_with_connection(
-            local_app, remote_name, conn_id
+            local_app, slim_bindings.Name.from_string(remote), conn_id
         )
 
     return factory
@@ -67,19 +56,10 @@ def slimrpc_group_channel_factory(
     conn_id: int,
 ) -> Callable[[list[str]], slim_bindings.Channel]:
     def factory(remotes: list[str]) -> slim_bindings.Channel:
-        members = []
-        for remote in remotes:
-            remote_parts = remote.split("/")
-            if len(remote_parts) != 3:
-                raise ValueError(
-                    f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
-                )
-            members.append(
-                slim_bindings.Name(remote_parts[0], remote_parts[1], remote_parts[2])
-            )
-
         return slim_bindings.Channel.new_group_with_connection(
-            local_app, members, conn_id
+            local_app,
+            [slim_bindings.Name.from_string(r) for r in remotes],
+            conn_id,
         )
 
     return factory
@@ -90,19 +70,10 @@ def slimrpc_group_shared_channel_factory(
     conn_id: int,
 ) -> Callable[[list[str]], slim_bindings.Channel]:
     def factory(remotes: list[str]) -> slim_bindings.Channel:
-        members = []
-        for remote in remotes:
-            remote_parts = remote.split("/")
-            if len(remote_parts) != 3:
-                raise ValueError(
-                    f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
-                )
-            members.append(
-                slim_bindings.Name(remote_parts[0], remote_parts[1], remote_parts[2])
-            )
-
         return slim_bindings.Channel.new_group_shared_with_connection(
-            local_app, members, conn_id
+            local_app,
+            [slim_bindings.Name.from_string(r) for r in remotes],
+            conn_id,
         )
 
     return factory
