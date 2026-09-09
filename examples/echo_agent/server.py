@@ -65,8 +65,8 @@ async def main() -> None:
                 secret="my_shared_secret_for_testing_purposes_only",
             )
 
-            # Create server
-            server = slim_bindings.Server.new_with_connection(
+            # Create server — always use shared-responses so broadcast clients work
+            server = slim_bindings.Server.new_with_shared_responses_and_connection(
                 local_app, local_name, conn_id
             )
 
@@ -80,13 +80,16 @@ async def main() -> None:
                 add_v0(compat_handler, server)
 
             if args.a2a_version in ("v1", "both"):
-                from slima2a.handler import SRPCHandler
+                from slima2a.handler import SRPCHandler, SRPCSharedHandler
                 from slima2a.types.v1.a2a_pb2_slimrpc import (
                     add_A2AServiceServicer_to_server as add_v1,
+                    add_A2AServiceServicer_to_server_shared as add_v1_shared,
                 )
 
                 handler = SRPCHandler(agent_card, default_request_handler)
                 add_v1(handler, server)
+                shared_handler = SRPCSharedHandler(agent_card, default_request_handler)
+                add_v1_shared(shared_handler, server)
 
             # Run server
             await server.serve_async()
@@ -123,7 +126,7 @@ def parse_arguments() -> argparse.Namespace:
         "--log-level",
         type=str,
         required=False,
-        default="ERROR",
+        default="INFO",
     )
 
     parser.add_argument(

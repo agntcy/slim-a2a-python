@@ -158,6 +158,14 @@ class A2AServiceStub:
         )
         return google__protobuf__empty_pb2.Empty.FromString(response_bytes)
 
+    def SendLiveMessage(self, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> slim_bindings.BidiStreamHandler:
+        """Open a bidirectional streaming SendLiveMessage call."""
+        return self._channel.call_stream_stream(
+            "lf.a2a.v1.A2AService",
+            "SendLiveMessage",
+            timeout,
+            metadata,
+        )
 
 
 class A2AServiceGroupStub:
@@ -374,6 +382,14 @@ class A2AServiceGroupStub:
             if msg.is_data():
                 yield msg.item.context, google__protobuf__empty_pb2.Empty.FromString(msg.item.message)
 
+    def SendLiveMessage(self, timeout: Optional[timedelta] = None, metadata: Optional[dict[str, str]] = None) -> slim_bindings.MulticastBidiStreamHandler:
+        """Open a bidirectional streaming SendLiveMessage call to all group members."""
+        return self._channel.call_multicast_stream_stream(
+            "lf.a2a.v1.A2AService",
+            "SendLiveMessage",
+            timeout,
+            metadata,
+        )
 
 
 class A2AServiceServicer:
@@ -467,7 +483,13 @@ class A2AServiceServicer:
             details=None
         )
 
-
+    def SendLiveMessage(self, request_stream, context, sink):
+        """Method for SendLiveMessage. Implement your service logic here."""
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
+        )
 
 
 class _A2AServiceServicer_SendMessage_Handler(slim_bindings.UnaryUnaryHandler):
@@ -675,6 +697,27 @@ class _A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler(slim_bindings
             )
 
 
+class _A2AServiceServicer_SendLiveMessage_Handler(slim_bindings.StreamStreamHandler):
+    def __init__(self, servicer):
+        self.servicer = servicer
+
+    async def handle(self, stream: slim_bindings.RequestStream, context: slim_bindings.Context, sink: slim_bindings.ResponseSink):
+        try:
+            response_iter = self.servicer.SendLiveMessage(stream, context, sink)
+            async for response in response_iter:
+                await sink.send_async(a2a__pb2.StreamResponse.SerializeToString(response))
+            await sink.close_async()
+        except slim_bindings.RpcError as e:
+            await sink.send_error_async(e)
+        except Exception as e:
+            rpc_error = slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
+            await sink.send_error_async(rpc_error)
+
+
 def add_A2AServiceServicer_to_server(servicer, server: slim_bindings.Server):
     server.register_unary_unary(
         service_name="lf.a2a.v1.A2AService",
@@ -730,4 +773,74 @@ def add_A2AServiceServicer_to_server(servicer, server: slim_bindings.Server):
         service_name="lf.a2a.v1.A2AService",
         method_name="DeleteTaskPushNotificationConfig",
         handler=_A2AServiceServicer_DeleteTaskPushNotificationConfig_Handler(servicer),
+    )
+    server.register_stream_stream(
+        service_name="lf.a2a.v1.A2AService",
+        method_name="SendLiveMessage",
+        handler=_A2AServiceServicer_SendLiveMessage_Handler(servicer),
+    )
+
+
+class A2AServiceSharedServicer:
+    """Shared-responses server servicer for A2AService.
+
+    Register with ``add_A2AServiceServicer_to_server_shared`` on a server created
+    with ``Server.new_with_shared_responses_and_connection``. Each method receives
+    an extra ``peer_responses`` argument — an async iterable of
+    ``(source, StreamResponse)`` tuples yielded by peer agents in the GROUP.
+    """
+
+    def SendLiveMessage(self, request_stream, context, sink, peer_responses):
+        """Method for SendLiveMessage (shared-responses). Implement your service logic here."""
+        raise slim_bindings.RpcError.Rpc(
+            code=slim_bindings.RpcCode.UNIMPLEMENTED,
+            message="Method not implemented!",
+            details=None
+        )
+
+
+class _A2AServiceServicer_SendLiveMessage_SharedHandler(slim_bindings.StreamStreamSharedHandler):
+    def __init__(self, servicer):
+        self.servicer = servicer
+
+    async def handle(self, stream: slim_bindings.RequestStream, context: slim_bindings.Context, sink: slim_bindings.ResponseSink, peer_stream: slim_bindings.PeerResponseStream):
+        try:
+            async def request_iterator():
+                while True:
+                    stream_msg = await stream.next_async()
+                    if stream_msg.is_end():
+                        break
+                    if stream_msg.is_error():
+                        raise stream_msg[0]
+                    if stream_msg.is_data():
+                        yield a2a__pb2.StreamRequest.FromString(stream_msg[0])
+
+            async def peer_iterator():
+                while True:
+                    msg = await peer_stream.next_async()
+                    if msg.is_end():
+                        break
+                    if msg.is_data():
+                        yield msg.source, a2a__pb2.StreamResponse.FromString(msg.payload)
+
+            response_iter = self.servicer.SendLiveMessage(request_iterator(), context, sink, peer_iterator())
+            async for response in response_iter:
+                await sink.send_async(a2a__pb2.StreamResponse.SerializeToString(response))
+            await sink.close_async()
+        except slim_bindings.RpcError as e:
+            await sink.send_error_async(e)
+        except Exception as e:
+            rpc_error = slim_bindings.RpcError.Rpc(
+                code=slim_bindings.RpcCode.INTERNAL,
+                message=str(e),
+                details=None
+            )
+            await sink.send_error_async(rpc_error)
+
+
+def add_A2AServiceServicer_to_server_shared(servicer, server: slim_bindings.Server):
+    server.register_stream_stream_shared(
+        service_name="lf.a2a.v1.A2AService",
+        method_name="SendLiveMessage",
+        handler=_A2AServiceServicer_SendLiveMessage_SharedHandler(servicer),
     )

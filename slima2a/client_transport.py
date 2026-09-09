@@ -1,6 +1,7 @@
 # Copyright AGNTCY Contributors (https://github.com/agntcy)
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
@@ -43,19 +44,8 @@ def slimrpc_channel_factory(
     conn_id: int,
 ) -> Callable[[str], slim_bindings.Channel]:
     def factory(remote: str) -> slim_bindings.Channel:
-        # Parse the remote name from the URL
-        remote_parts = remote.split("/")
-        if len(remote_parts) != 3:
-            raise ValueError(
-                f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
-            )
-
-        remote_name = slim_bindings.Name(
-            remote_parts[0], remote_parts[1], remote_parts[2]
-        )
-
         return slim_bindings.Channel.new_with_connection(
-            local_app, remote_name, conn_id
+            local_app, slim_bindings.Name.from_string(remote), conn_id
         )
 
     return factory
@@ -66,19 +56,24 @@ def slimrpc_group_channel_factory(
     conn_id: int,
 ) -> Callable[[list[str]], slim_bindings.Channel]:
     def factory(remotes: list[str]) -> slim_bindings.Channel:
-        members = []
-        for remote in remotes:
-            remote_parts = remote.split("/")
-            if len(remote_parts) != 3:
-                raise ValueError(
-                    f"Invalid remote format: '{remote}'. Expected format: 'component1/component2/component'"
-                )
-            members.append(
-                slim_bindings.Name(remote_parts[0], remote_parts[1], remote_parts[2])
-            )
-
         return slim_bindings.Channel.new_group_with_connection(
-            local_app, members, conn_id
+            local_app,
+            [slim_bindings.Name.from_string(r) for r in remotes],
+            conn_id,
+        )
+
+    return factory
+
+
+def slimrpc_group_shared_channel_factory(
+    local_app: slim_bindings.App,
+    conn_id: int,
+) -> Callable[[list[str]], slim_bindings.Channel]:
+    def factory(remotes: list[str]) -> slim_bindings.Channel:
+        return slim_bindings.Channel.new_group_shared_with_connection(
+            local_app,
+            [slim_bindings.Name.from_string(r) for r in remotes],
+            conn_id,
         )
 
     return factory
@@ -88,6 +83,9 @@ def slimrpc_group_channel_factory(
 class ClientConfig(A2AClientConfig):
     slimrpc_channel_factory: Callable[[str], slim_bindings.Channel] | None = None
     slimrpc_group_channel_factory: (
+        Callable[[list[str]], slim_bindings.Channel] | None
+    ) = None
+    slimrpc_group_shared_channel_factory: (
         Callable[[list[str]], slim_bindings.Channel] | None
     ) = None
 
@@ -241,6 +239,31 @@ class SRPCTransport(ClientTransport):
         if card and not card.capabilities.extended_agent_card:
             return card
         return await self.stub.GetExtendedAgentCard(request)
+
+    async def send_live_message(
+        self,
+        request_stream: "AsyncGenerator[Any, None]",
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AsyncGenerator[StreamResponse, None]:
+        """Sends a bidirectional streaming live message request to the agent."""
+        bidi = self.stub.SendLiveMessage()
+        async def _send():
+            async for req in request_stream:
+                await bidi.send_async(req.SerializeToString())
+            await bidi.close_send_async()
+        send_task = asyncio.ensure_future(_send())
+        try:
+            while True:
+                msg = await bidi.recv_async()
+                if msg.is_end():
+                    break
+                if msg.is_error():
+                    raise msg[0]
+                if msg.is_data():
+                    yield StreamResponse.FromString(msg[0])
+        finally:
+            await send_task
 
     async def close(self) -> None:
         """Closes the transport and releases any resources."""
@@ -447,6 +470,34 @@ class SRPCMulticastTransport:
         async for source, response in self.stub.GetExtendedAgentCard(request):
             yield source, response
 
+    async def send_live_message(
+        self,
+        request_stream: "AsyncGenerator[Any, None]",
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AsyncGenerator[tuple[Any, StreamResponse], None]:
+        """Sends a bidirectional streaming live message to all agents in the group.
+
+        Yields (source, StreamResponse) tuples as events arrive from any agent.
+        """
+        bidi = self.stub.SendLiveMessage()
+        async def _send():
+            async for req in request_stream:
+                await bidi.send_async(req.SerializeToString())
+            await bidi.close_send_async()
+        send_task = asyncio.ensure_future(_send())
+        try:
+            while True:
+                msg = await bidi.recv_async()
+                if msg.is_end():
+                    break
+                if msg.is_error():
+                    raise msg.error
+                if msg.is_data():
+                    yield msg.item.context, StreamResponse.FromString(msg.item.message)
+        finally:
+            await send_task
+
     async def close(self) -> None:
         """Closes the transport and releases any resources."""
         pass
@@ -619,6 +670,22 @@ class MulticastClient:
     ) -> AsyncGenerator[tuple[Any, AgentCard], None]:
         async for source, response in self._transport.get_extended_agent_card(
             request, context=context
+        ):
+            yield source, response
+
+    async def send_live_message(
+        self,
+        request_stream: "AsyncGenerator[Any, None]",
+        *,
+        context: ClientCallContext | None = None,
+    ) -> AsyncGenerator[tuple[Any, StreamResponse], None]:
+        """Sends a bidirectional streaming live message to all agents in the group.
+
+        Yields (source, StreamResponse) tuples as events arrive from any agent.
+        Use ``source`` to demultiplex per-agent.
+        """
+        async for source, response in self._transport.send_live_message(
+            request_stream, context=context
         ):
             yield source, response
 

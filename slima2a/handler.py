@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # ruff: noqa: N802
+import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterable, Callable
 
@@ -280,6 +281,38 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
             await self.raise_error_response(e)
         return empty_pb2.Empty()
 
+    async def SendLiveMessage(
+        self,
+        request_stream: slim_bindings.RequestStream,
+        context: slim_bindings.Context,
+        sink: slim_bindings.ResponseSink,
+    ) -> AsyncIterable[a2a_pb2.StreamResponse]:
+        """Handles the 'SendLiveMessage' SlimRPC bidi streaming method."""
+        server_context = self.context_builder.build(context)
+
+        async def _decoded_stream() -> AsyncIterable[a2a_pb2.StreamRequest]:
+            while True:
+                msg = await request_stream.next_async()
+                if msg.is_end():
+                    break
+                if msg.is_error():
+                    raise msg[0]
+                if msg.is_data():
+                    req = a2a_pb2.StreamRequest.FromString(msg[0])
+                    if not server_context.tenant:
+                        server_context.tenant = req.tenant
+                    yield req
+
+        try:
+            async for event in self.request_handler.on_live_message_send(
+                _decoded_stream(), server_context
+            ):
+                yield event
+        except asyncio.QueueShutDown:
+            pass
+        except A2AError as e:
+            await self.raise_error_response(e)
+
     async def GetExtendedAgentCard(
         self,
         request: a2a_pb2.GetExtendedAgentCardRequest,
@@ -290,3 +323,131 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
         if self.card_modifier:
             card_to_serve = self.card_modifier(card_to_serve)
         return card_to_serve
+
+
+class SRPCSharedHandler(a2a_pb2_slimrpc.A2AServiceSharedServicer):
+    """Maps incoming broadcast-live SlimRPC SendLiveMessage calls to the request handler.
+
+    Peer agent StreamResponse events are translated to StreamRequest items and
+    merged into the unified inbound stream before on_live_message_send is called,
+    so application code sees a single mixed stream of client and peer messages.
+    """
+
+    def __init__(
+        self,
+        agent_card: AgentCard,
+        request_handler: RequestHandler,
+        context_builder: CallContextBuilder | None = None,
+        card_modifier: Callable[[AgentCard], AgentCard] | None = None,
+    ) -> None:
+        self.agent_card = agent_card
+        self.request_handler = request_handler
+        self.context_builder = context_builder or DefaultCallContextBuilder()
+        self.card_modifier = card_modifier
+
+    async def raise_error_response(self, error: A2AError) -> None:
+        code = _SLIM_ERROR_CODE_MAP.get(type(error), code_pb2.UNKNOWN)
+        raise slim_bindings.RpcError.Rpc(
+            code=code,
+            message=f"{type(error).__name__}: {error.message}",
+            details=None,
+        )
+
+    async def SendLiveMessage(
+        self,
+        request_stream: AsyncIterable[a2a_pb2.StreamRequest],
+        context: slim_bindings.Context,
+        sink: slim_bindings.ResponseSink,
+        peer_responses: AsyncIterable,
+    ) -> AsyncIterable[a2a_pb2.StreamResponse]:
+        """Handles broadcast SendLiveMessage: merges client stream with translated peer events."""
+        server_context = self.context_builder.build(context)
+
+        queue: asyncio.Queue[a2a_pb2.StreamRequest | None] = asyncio.Queue()
+
+        async def _feed_client() -> None:
+            try:
+                async for req in request_stream:
+                    if not server_context.tenant:
+                        server_context.tenant = req.tenant
+                    await queue.put(req)
+            finally:
+                await queue.put(None)
+
+        async def _feed_peers() -> None:
+            try:
+                async for source, stream_response in peer_responses:
+                    src_str = str(source)
+                    translated = _translate_peer_response(src_str, stream_response)
+                    if translated is not None:
+                        await queue.put(translated)
+            finally:
+                await queue.put(None)
+
+        async def _merged_stream() -> AsyncIterable[a2a_pb2.StreamRequest]:
+            client_task = asyncio.ensure_future(_feed_client())
+            peer_task = asyncio.ensure_future(_feed_peers())
+            pending = 2
+            try:
+                while pending > 0:
+                    item = await queue.get()
+                    if item is None:
+                        pending -= 1
+                    else:
+                        yield item
+            finally:
+                client_task.cancel()
+                peer_task.cancel()
+
+        try:
+            async for event in self.request_handler.on_live_message_send(
+                _merged_stream(), server_context
+            ):
+                yield event
+        except asyncio.QueueShutDown:
+            pass
+        except A2AError as e:
+            await self.raise_error_response(e)
+
+
+def _translate_peer_response(
+    source: str,
+    response: a2a_pb2.StreamResponse,
+) -> a2a_pb2.StreamRequest | None:
+    """Translate a peer StreamResponse to a StreamRequest per spec Section 5."""
+    which = response.WhichOneof("payload")
+    meta = {"slim-src": source}
+
+    if which == "task":
+        task = response.task
+        meta["slim-peer-task-id"] = task.id
+        msg = a2a_pb2.Message(
+            role=a2a_pb2.Role.ROLE_USER,
+            parts=[a2a_pb2.Part(text=f"peer task started: {task.id}")],
+        )
+        return a2a_pb2.StreamRequest(message=msg, metadata=meta)
+
+    if which == "status_update":
+        update = response.status_update
+        meta["slim-peer-task-id"] = update.task_id
+        if update.status.HasField("message"):
+            return a2a_pb2.StreamRequest(message=update.status.message, metadata=meta)
+        state_name = a2a_pb2.TaskState.Name(update.status.state)
+        meta["slim-peer-state"] = state_name
+        msg = a2a_pb2.Message(
+            role=a2a_pb2.Role.ROLE_USER,
+            parts=[a2a_pb2.Part(text=f"peer task state: {state_name}")],
+        )
+        return a2a_pb2.StreamRequest(message=msg, metadata=meta)
+
+    if which == "artifact_update":
+        update = response.artifact_update
+        meta["slim-peer-task-id"] = update.task_id
+        return a2a_pb2.StreamRequest(artifact_update=update, metadata=meta)
+
+    if which == "message_update":
+        update = response.message_update
+        meta["slim-peer-task-id"] = update.task_id
+        return a2a_pb2.StreamRequest(message=update.message, metadata=meta)
+
+    return None
