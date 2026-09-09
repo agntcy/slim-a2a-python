@@ -20,20 +20,22 @@ class EchoAgentExecutor(AgentExecutor):
         event_queue: EventQueue,
         input_queue: AgentInputQueue,
     ) -> None:
+        turn = await input_queue.get()
+
         if (
-            (not context.message)
-            or (not context.message.task_id)
-            or (not context.message.context_id)
+            (not turn.message)
+            or (not turn.message.task_id)
+            or (not turn.message.context_id)
         ):
             raise Exception("invalid message")
 
-        logging.debug(f"received message: {context.message}")
+        logging.debug(f"received message: {turn.message}")
 
         # The V2 request handler requires an initial Task to be enqueued
         # before any status/artifact update events are emitted.
-        task = context.current_task
+        task = turn.current_task
         if task is None:
-            task = new_task_from_user_message(context.message)
+            task = new_task_from_user_message(turn.message)
             await event_queue.enqueue_event(task)
 
         task_updater = TaskUpdater(
@@ -42,14 +44,14 @@ class EchoAgentExecutor(AgentExecutor):
             context_id=task.context_id,
         )
 
-        if context.message.parts[0].WhichOneof("content") != "text":
+        if turn.message.parts[0].WhichOneof("content") != "text":
             raise Exception("only text parts are supported")
 
-        result = await self.agent.invoke(context.message.parts[0].text)
+        result = await self.agent.invoke(turn.message.parts[0].text)
 
         response = Message(
             role=Role.ROLE_AGENT,
-            message_id=context.message.message_id,
+            message_id=turn.message.message_id,
             parts=[Part(text=result)],
         )
         await task_updater.add_artifact(
