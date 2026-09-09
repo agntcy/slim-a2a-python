@@ -50,6 +50,11 @@ class EchoAgentExecutor(AgentExecutor):
                     context_id=task.context_id,
                 )
 
+            # Peer-translated messages carry slim-src metadata — don't echo them
+            if turn.metadata.get("slim-src"):
+                logger.info(f"skipping peer message from {turn.metadata['slim-src']}")
+                continue
+
             if turn.message.parts[0].WhichOneof("content") != "text":
                 logger.warning("skipping non-text message part")
                 continue

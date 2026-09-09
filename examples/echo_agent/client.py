@@ -103,21 +103,27 @@ async def main() -> None:
 
     client = client_factory.create(card=cards)
 
-    if isinstance(client, MulticastClient) and args.broadcast:
-        print(f"> {args.text} (broadcast live to {agent_names})")
-        await send_live_message_broadcast(client, args.text)
-    elif isinstance(client, MulticastClient):
-        print(f"> {args.text} (multicast to {agent_names})")
-        await send_message_multicast(client, args.text)
-    elif args.live:
-        logger.info("A2AClient initialized.")
-        print(f"> {args.text} (live)")
-        await send_live_message(client, args.text)
-    else:
-        logger.info("A2AClient initialized.")
-        response_text = await send_message(client, args.text)
-        print(f"> {args.text}")
-        print(response_text)
+    try:
+        if isinstance(client, MulticastClient) and args.broadcast:
+            print(f"> {args.text} (broadcast live to {agent_names})")
+            await send_live_message_broadcast(client, args.text)
+        elif isinstance(client, MulticastClient):
+            print(f"> {args.text} (multicast to {agent_names})")
+            await send_message_multicast(client, args.text)
+        elif args.live:
+            logger.info("A2AClient initialized.")
+            print(f"> {args.text} (live)")
+            await send_live_message(client, args.text)
+        else:
+            logger.info("A2AClient initialized.")
+            response_text = await send_message(client, args.text)
+            print(f"> {args.text}")
+            print(response_text)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        await client.close()
+        await httpx_client.aclose()
 
 
 def parse_arguments() -> argparse.Namespace:
