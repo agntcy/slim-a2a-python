@@ -2,6 +2,7 @@ import logging
 
 from a2a.helpers import new_task_from_user_message
 from a2a.server.agent_execution import AgentExecutor, RequestContext
+from a2a.server.agent_execution.agent_input_queue import AgentInputQueue
 from a2a.server.events import EventQueue
 from a2a.server.tasks.task_updater import TaskUpdater
 from a2a.types import Message, Part, Role
@@ -17,6 +18,7 @@ class EchoAgentExecutor(AgentExecutor):
         self,
         context: RequestContext,
         event_queue: EventQueue,
+        input_queue: AgentInputQueue,
     ) -> None:
         if (
             (not context.message)
