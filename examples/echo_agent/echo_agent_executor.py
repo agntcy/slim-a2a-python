@@ -29,7 +29,7 @@ class EchoAgentExecutor(AgentExecutor):
         ):
             raise Exception("invalid message")
 
-        logging.debug(f"received message: {turn.message}")
+        logging.info(f"received message: {turn.message}")
 
         # The V2 request handler requires an initial Task to be enqueued
         # before any status/artifact update events are emitted.
