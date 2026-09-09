@@ -25,46 +25,46 @@ class EchoAgentExecutor(AgentExecutor):
     ) -> None:
         task_updater: TaskUpdater | None = None
 
-        try:
-            while True:
+        while True:
+            try:
                 turn = await input_queue.get()
+            except QueueShutDown:
+                break
 
-                if not turn.message:
-                    continue
+            if not turn.message:
+                continue
 
-                logger.info(f"received message: {turn.message}")
+            logger.info(f"received message: {turn.message}")
 
-                if task_updater is None:
-                    # First turn: bootstrap the task
-                    if not turn.message.task_id or not turn.message.context_id:
-                        raise Exception("invalid message")
-                    task = turn.current_task
-                    if task is None:
-                        task = new_task_from_user_message(turn.message)
-                        await event_queue.enqueue_event(task)
-                    task_updater = TaskUpdater(
-                        event_queue=event_queue,
-                        task_id=task.id,
-                        context_id=task.context_id,
-                    )
-
-                if turn.message.parts[0].WhichOneof("content") != "text":
-                    logger.warning("skipping non-text message part")
-                    continue
-
-                result = await self.agent.invoke(turn.message.parts[0].text)
-
-                response = Message(
-                    role=Role.ROLE_AGENT,
-                    message_id=turn.message.message_id,
-                    parts=[Part(text=result)],
+            if task_updater is None:
+                # First turn: bootstrap the task
+                if not turn.message.task_id or not turn.message.context_id:
+                    raise Exception("invalid message")
+                task = turn.current_task
+                if task is None:
+                    task = new_task_from_user_message(turn.message)
+                    await event_queue.enqueue_event(task)
+                task_updater = TaskUpdater(
+                    event_queue=event_queue,
+                    task_id=task.id,
+                    context_id=task.context_id,
                 )
-                await task_updater.add_artifact(
-                    parts=list(response.parts),
-                    name="result",
-                )
-        except QueueShutDown:
-            pass
+
+            if turn.message.parts[0].WhichOneof("content") != "text":
+                logger.warning("skipping non-text message part")
+                continue
+
+            result = await self.agent.invoke(turn.message.parts[0].text)
+
+            response = Message(
+                role=Role.ROLE_AGENT,
+                message_id=turn.message.message_id,
+                parts=[Part(text=result)],
+            )
+            await task_updater.add_artifact(
+                parts=list(response.parts),
+                name="result",
+            )
 
         if task_updater is not None:
             await task_updater.complete()
