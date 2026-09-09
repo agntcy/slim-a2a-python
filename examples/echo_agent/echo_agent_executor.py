@@ -34,8 +34,8 @@ class EchoAgentExecutor(AgentExecutor):
             if not turn.message:
                 continue
 
-            # Peer-translated messages carry slim-src in metadata; direct client
-            # messages never do — skip peer messages
+            # slim-src is set only on peer-translated messages (per spec §6);
+            # direct client messages never carry it — use its presence to skip peers
             msg_src = turn.metadata.get("slim-src")
             if msg_src:
                 logger.info(f"skipping peer message from {msg_src}")
