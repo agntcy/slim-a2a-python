@@ -24,6 +24,7 @@ class EchoAgentExecutor(AgentExecutor):
         input_queue: AgentInputQueue,
     ) -> None:
         task_updater: TaskUpdater | None = None
+        client_slim_src: str | None = None
 
         while True:
             try:
@@ -37,9 +38,10 @@ class EchoAgentExecutor(AgentExecutor):
             logger.info(f"received message: {turn.message}")
 
             if task_updater is None:
-                # First turn: bootstrap the task
+                # First turn: bootstrap the task and capture the client's slim-src
                 if not turn.message.task_id or not turn.message.context_id:
                     raise Exception("invalid message")
+                client_slim_src = turn.metadata.get("slim-src")
                 task = turn.current_task
                 if task is None:
                     task = new_task_from_user_message(turn.message)
@@ -50,9 +52,11 @@ class EchoAgentExecutor(AgentExecutor):
                     context_id=task.context_id,
                 )
 
-            # Peer-translated messages carry slim-peer-task-id — don't echo them
-            if turn.metadata.get("slim-peer-task-id"):
-                logger.info(f"skipping peer message from {turn.metadata.get('slim-src')}")
+            # In broadcast mode slim-src identifies the sender; skip messages
+            # not from the original client
+            msg_src = turn.metadata.get("slim-src")
+            if client_slim_src and msg_src and msg_src != client_slim_src:
+                logger.info(f"skipping peer message from {msg_src}")
                 continue
 
             if turn.message.parts[0].WhichOneof("content") != "text":
