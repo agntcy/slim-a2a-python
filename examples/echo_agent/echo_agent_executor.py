@@ -1,5 +1,7 @@
 import logging
 
+logger = logging.getLogger(__name__)
+
 from a2a.helpers import new_task_from_user_message
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.agent_execution.agent_input_queue import AgentInputQueue
@@ -29,7 +31,7 @@ class EchoAgentExecutor(AgentExecutor):
         ):
             raise Exception("invalid message")
 
-        logging.info(f"received message: {turn.message}")
+        logger.info(f"received message: {turn.message}")
 
         # The V2 request handler requires an initial Task to be enqueued
         # before any status/artifact update events are emitted.

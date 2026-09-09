@@ -126,7 +126,7 @@ def parse_arguments() -> argparse.Namespace:
         "--log-level",
         type=str,
         required=False,
-        default="ERROR",
+        default="INFO",
     )
 
     parser.add_argument(
