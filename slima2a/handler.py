@@ -353,7 +353,7 @@ class SRPCSharedHandler(a2a_pb2_slimrpc.A2AServiceSharedServicer):
 
     async def SendLiveMessage(
         self,
-        request_stream: slim_bindings.RequestStream,
+        request_stream: AsyncIterable[a2a_pb2.StreamRequest],
         context: slim_bindings.Context,
         sink: slim_bindings.ResponseSink,
         peer_responses: AsyncIterable,
@@ -365,18 +365,10 @@ class SRPCSharedHandler(a2a_pb2_slimrpc.A2AServiceSharedServicer):
 
         async def _feed_client() -> None:
             try:
-                while True:
-                    msg = await request_stream.next_async()
-                    if msg.is_end():
-                        break
-                    if msg.is_error():
-                        await queue.put(None)
-                        return
-                    if msg.is_data():
-                        req = a2a_pb2.StreamRequest.FromString(msg[0])
-                        if not server_context.tenant:
-                            server_context.tenant = req.tenant
-                        await queue.put(req)
+                async for req in request_stream:
+                    if not server_context.tenant:
+                        server_context.tenant = req.tenant
+                    await queue.put(req)
             finally:
                 await queue.put(None)
 
