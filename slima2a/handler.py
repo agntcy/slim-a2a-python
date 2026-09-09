@@ -308,6 +308,8 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
                 _decoded_stream(), server_context
             ):
                 yield event
+        except asyncio.QueueShutDown:
+            pass
         except A2AError as e:
             await self.raise_error_response(e)
 
@@ -402,6 +404,8 @@ class SRPCSharedHandler(a2a_pb2_slimrpc.A2AServiceSharedServicer):
                 _merged_stream(), server_context
             ):
                 yield event
+        except asyncio.QueueShutDown:
+            pass
         except A2AError as e:
             await self.raise_error_response(e)
 
