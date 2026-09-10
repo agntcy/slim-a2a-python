@@ -88,6 +88,7 @@ class ClientConfig(A2AClientConfig):
     slimrpc_group_shared_channel_factory: (
         Callable[[list[str]], slim_bindings.Channel] | None
     ) = None
+    local_name: slim_bindings.Name | None = None
 
 
 @trace_class(kind=SpanKind.CLIENT)
@@ -98,11 +99,13 @@ class SRPCTransport(ClientTransport):
         self,
         channel: slim_bindings.Channel,
         agent_card: AgentCard | None,
+        local_name: slim_bindings.Name | None = None,
     ) -> None:
         """Initializes the SRPCTransport."""
         self.agent_card = agent_card
         self.channel = channel
         self.stub = a2a_pb2_slimrpc.A2AServiceStub(channel)
+        self._local_name = local_name
 
     @classmethod
     def create(
@@ -134,7 +137,7 @@ class SRPCTransport(ClientTransport):
         if url is None:
             raise ValueError("url is required for unicast sRPC")
         channel = config.slimrpc_channel_factory(url)
-        return cls(channel, card)
+        return cls(channel, card, config.local_name)
 
     async def send_message(
         self,
@@ -247,7 +250,8 @@ class SRPCTransport(ClientTransport):
         context: ClientCallContext | None = None,
     ) -> AsyncGenerator[StreamResponse, None]:
         """Sends a bidirectional streaming live message request to the agent."""
-        bidi = self.stub.SendLiveMessage()
+        metadata = {"slim-src": str(self._local_name)} if self._local_name else None
+        bidi = self.stub.SendLiveMessage(metadata=metadata)
         async def _send():
             async for req in request_stream:
                 await bidi.send_async(req.SerializeToString())
@@ -349,9 +353,11 @@ class SRPCMulticastTransport:
     def __init__(
         self,
         channel: slim_bindings.Channel,
+        local_name: slim_bindings.Name | None = None,
     ) -> None:
         self.channel = channel
         self.stub = a2a_pb2_slimrpc.A2AServiceGroupStub(channel)
+        self._local_name = local_name
 
     @classmethod
     def create(
@@ -365,7 +371,7 @@ class SRPCMulticastTransport:
                 "slimrpc_group_channel_factory is required when using sRPC multicast"
             )
         channel = config.slimrpc_group_channel_factory(agent_names)
-        return cls(channel)
+        return cls(channel, config.local_name)
 
     async def send_message(
         self,
@@ -480,7 +486,8 @@ class SRPCMulticastTransport:
 
         Yields (source, StreamResponse) tuples as events arrive from any agent.
         """
-        bidi = self.stub.SendLiveMessage()
+        metadata = {"slim-src": str(self._local_name)} if self._local_name else None
+        bidi = self.stub.SendLiveMessage(metadata=metadata)
         async def _send():
             async for req in request_stream:
                 await bidi.send_async(req.SerializeToString())

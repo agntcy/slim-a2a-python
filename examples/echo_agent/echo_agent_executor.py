@@ -24,6 +24,7 @@ class EchoAgentExecutor(AgentExecutor):
         input_queue: AgentInputQueue,
     ) -> None:
         task_updater: TaskUpdater | None = None
+        client_slim_src: str | None = None
 
         while True:
             try:
@@ -34,10 +35,13 @@ class EchoAgentExecutor(AgentExecutor):
             if not turn.message:
                 continue
 
-            # slim-src is set only on peer-translated messages (per spec §6);
-            # direct client messages never carry it — use its presence to skip peers
+            # slim-src is set on all messages in broadcast mode (spec §6).
+            # Capture the client's identity from the first turn, then skip messages
+            # from other senders (peer agents).
             msg_src = turn.metadata.get("slim-src")
-            if msg_src:
+            if task_updater is None:
+                client_slim_src = msg_src
+            elif msg_src and msg_src != client_slim_src:
                 logger.info(f"skipping peer message from {msg_src}")
                 continue
 

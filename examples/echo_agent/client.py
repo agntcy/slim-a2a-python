@@ -76,6 +76,7 @@ async def main() -> None:
         slimrpc_group_shared_channel_factory=slimrpc_group_shared_channel_factory(
             slim_local_app, conn_id
         ),
+        local_name=local_name,
     )
     client_factory = MultiAgentClientFactory(client_config)
 

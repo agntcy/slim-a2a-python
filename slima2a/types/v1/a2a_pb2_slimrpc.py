@@ -805,6 +805,8 @@ class _A2AServiceServicer_SendLiveMessage_SharedHandler(slim_bindings.StreamStre
 
     async def handle(self, stream: slim_bindings.RequestStream, context: slim_bindings.Context, sink: slim_bindings.ResponseSink, peer_stream: slim_bindings.PeerResponseStream):
         try:
+            slim_src = context.metadata().get("slim-src")
+
             async def request_iterator():
                 while True:
                     stream_msg = await stream.next_async()
@@ -813,7 +815,10 @@ class _A2AServiceServicer_SendLiveMessage_SharedHandler(slim_bindings.StreamStre
                     if stream_msg.is_error():
                         raise stream_msg[0]
                     if stream_msg.is_data():
-                        yield a2a__pb2.StreamRequest.FromString(stream_msg[0])
+                        req = a2a__pb2.StreamRequest.FromString(stream_msg[0])
+                        if slim_src:
+                            req.metadata["slim-src"] = slim_src
+                        yield req
 
             async def peer_iterator():
                 while True:
