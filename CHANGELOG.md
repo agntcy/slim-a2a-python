@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.1](https://github.com/agntcy/slim-a2a-python/compare/v0.7.0...v0.7.1) (2026-09-10)
+
+
+### Features
+
+* openssf scoreboard implementation ([#29](https://github.com/agntcy/slim-a2a-python/issues/29)) ([3966c94](https://github.com/agntcy/slim-a2a-python/commit/3966c9406c04e13637ee7625c24455df0bfb5bc0))
+
+
+### Documentation
+
+* add CONTRIBUTORS.md file ([#31](https://github.com/agntcy/slim-a2a-python/issues/31)) ([5a3b4ae](https://github.com/agntcy/slim-a2a-python/commit/5a3b4ae30a6bb4586b137cadb1a1380a1adc3f5c))
+
 ## [0.7.0](https://github.com/agntcy/slim-a2a-python/compare/v0.6.1...v0.7.0) (2026-08-07)
 
 
