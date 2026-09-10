@@ -9,22 +9,17 @@ resolution-markers = [
 
 [[package]]
 name = "a2a-sdk"
-version = "1.1.0"
-source = { registry = "https://pypi.org/simple" }
+version = "0.0.0.post752.dev0+7346c66"
+source = { git = "https://github.com/Tehsmash/a2a-python?branch=feat%2Fsend-live-message#7346c660bceb5063ad23646976f537aa217c1867" }
 dependencies = [
     { name = "culsans", marker = "python_full_version < '3.13'" },
     { name = "google-api-core" },
     { name = "googleapis-common-protos" },
     { name = "httpx" },
-    { name = "httpx-sse" },
     { name = "json-rpc" },
     { name = "packaging" },
     { name = "protobuf" },
     { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/7e/8ac10bbf8b15b16574355f39b17dbdf617a282c27b41c7ff2116e30336df/a2a_sdk-1.1.0.tar.gz", hash = "sha256:e8102dad1b36709dbdc3d19319e38e6dfa3b3a79c30416030eb2d482576be204", size = 375726, upload-time = "2026-05-29T09:34:43.015Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/ea/3a5b160cfd51c67759b08748051094d9365ceff18127633d0021950c9860/a2a_sdk-1.1.0-py3-none-any.whl", hash = "sha256:d7f5846caf18033d8bf3108b11ec827dd8dd32f867c98848ede0e39474be93be", size = 241886, upload-time = "2026-05-29T09:34:41.484Z" },
 ]
 
 [package.optional-dependencies]
@@ -45,9 +40,9 @@ name = "aiologic"
 version = "0.17.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "sniffio", marker = "python_full_version < '3.13'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
-    { name = "wrapt", marker = "python_full_version < '3.13'" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+    { name = "wrapt" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f1/7a/d51f2fde1e8ae8a83431f8e97b7a71e9358cdb1d4d2ce6be387fa44d68de/aiologic-0.17.1.tar.gz", hash = "sha256:2e1b93b9e88ced318c2a63ad7b382688f40cbfe40e3d42258d49dc9c5aea179d", size = 252354, upload-time = "2026-06-27T20:41:33.25Z" }
 wheels = [
@@ -368,8 +363,8 @@ name = "culsans"
 version = "0.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiologic", marker = "python_full_version < '3.13'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "aiologic" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d9/e3/49afa1bc180e0d28008ec6bcdf82a4072d1c7a41032b5b759b60814ca4b0/culsans-0.11.0.tar.gz", hash = "sha256:0b43d0d05dce6106293d114c86e3fb4bfc63088cfe8ff08ed3fe36891447fe33", size = 107546, upload-time = "2025-12-31T23:15:38.196Z" }
 wheels = [
@@ -390,7 +385,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -539,15 +534,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
-]
-
-[[package]]
-name = "httpx-sse"
-version = "0.4.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0f/4c/751061ffa58615a32c31b2d82e8482be8dd4a89154f003147acee90f2be9/httpx_sse-0.4.3.tar.gz", hash = "sha256:9b1ed0127459a66014aec3c56bebd93da3c1bc8bb6618c8082039a44889a755d", size = 15943, upload-time = "2025-10-10T21:48:22.271Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/fd/6668e5aec43ab844de6fc74927e155a3b37bf40d7c3790e49fc0406b6578/httpx_sse-0.4.3-py3-none-any.whl", hash = "sha256:0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc", size = 8960, upload-time = "2025-10-10T21:48:21.158Z" },
 ]
 
 [[package]]
@@ -1552,22 +1538,40 @@ wheels = [
 
 [[package]]
 name = "slim-bindings"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/cc/0841f22d32c7b5c57a6c402287d30d7f8dc48d6abb4c6b7de54c9f1b36ff/slim_bindings-2.0.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:c242eb2ce33ed251301879145347ad4255d001a56bfbe7c4955eaa98929ae723", size = 18959817, upload-time = "2026-08-05T16:13:35.074Z" },
-    { url = "https://files.pythonhosted.org/packages/6c/6b/45973eca8a94e01aad34bf5fd12a88ae0245f8632ee31c9663552c6ea233/slim_bindings-2.0.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:fcb8efc80f33d41fc034704550ec600eba6d20d1be7634c7568ca725f87c2325", size = 18374062, upload-time = "2026-08-05T16:13:37.461Z" },
-    { url = "https://files.pythonhosted.org/packages/b3/7a/235c9836bbd900829e3b4092ab5b8602728222bb0076ca13360e7f2cffed/slim_bindings-2.0.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:9d569602eb8bdb63aad16104d04f9371bf4bbfb1f6ea801c49c563e87f09bf6b", size = 19113120, upload-time = "2026-08-05T16:13:39.889Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/d2/56539434db59d19131760d84adb48bdfca122b78b1550845b98d57e8256f/slim_bindings-2.0.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:9d2b3e76063f307c0a8cb4e26d6fec0e19e5fd9312fb516101517a47909bec15", size = 19759699, upload-time = "2026-08-05T16:13:41.935Z" },
-    { url = "https://files.pythonhosted.org/packages/28/35/da680723dc975059b5bec01ffa4e9da53bcda32bb59145aa465d896ee766/slim_bindings-2.0.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:218383d2066f242a5d8a9bddcfc0d67d5c5585ab4b20391915280e91dd043149", size = 19111600, upload-time = "2026-08-05T16:13:44.479Z" },
-    { url = "https://files.pythonhosted.org/packages/89/c1/823731e7ebb39a25264294dfa21d142c9f3b57d4a5444f9b68006c5a71b7/slim_bindings-2.0.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:96f9453877bd4ed4cac6cdb3f1faf608800acd5e8d496b1eda4fbc72b5561671", size = 19763962, upload-time = "2026-08-05T16:13:46.872Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/53/fb2b38bf0d12d1b81e9ee66cd3a4a96a5e7bfc2c01555b6261aadbf21de4/slim_bindings-2.0.0-py3-none-win_amd64.whl", hash = "sha256:60182551290a1d3d0377630e743a0153c58ebccea0170a870d7be6dfabb27749", size = 17248028, upload-time = "2026-08-05T16:13:49.223Z" },
-    { url = "https://files.pythonhosted.org/packages/72/56/5f2d2086f0f4f977d7fbcfe752b28bf10e1576b85a3c8603b08bfeb8637d/slim_bindings-2.0.0-py3-none-win_arm64.whl", hash = "sha256:827b1ba925b666561493cc4203139170c3669650eef7fd2d95465803b2294890", size = 16155968, upload-time = "2026-08-05T16:13:51.653Z" },
+source = { editable = "../slim-bindings/python" }
+
+[package.metadata]
+requires-dist = [
+    { name = "googleapis-common-protos", marker = "extra == 'examples'", specifier = ">=1.72.0" },
+    { name = "prompt-toolkit", marker = "extra == 'examples'", specifier = ">=3.0.52" },
+    { name = "protobuf", marker = "extra == 'examples'", specifier = ">=6.33.4" },
+    { name = "pydantic", marker = "extra == 'examples'", specifier = ">=2.0.0" },
+    { name = "pydantic-settings", marker = "extra == 'examples'", specifier = ">=2.0.0" },
+    { name = "pyyaml", marker = "extra == 'examples'", specifier = ">=6.0.3" },
+    { name = "tomli", marker = "extra == 'examples'", specifier = ">=2.4.0" },
+]
+provides-extras = ["examples"]
+
+[package.metadata.requires-dev]
+building = [
+    { name = "maturin", specifier = ">=1.11,<1.15" },
+    { name = "maturin", extras = ["patchelf"], marker = "sys_platform == 'linux'", specifier = ">=1.8.2,<1.15" },
+    { name = "uniffi-bindgen", specifier = "==0.31.0" },
+]
+linting = [
+    { name = "griffe", specifier = ">=1.5.5" },
+    { name = "mypy", specifier = ">=1.14.1" },
+    { name = "pyright", specifier = ">=1.1.0" },
+    { name = "ruff", specifier = ">=0.9.3" },
+]
+testing = [
+    { name = "pytest", specifier = ">=7.4.0" },
+    { name = "pytest-asyncio", specifier = ">=0.21.0" },
 ]
 
 [[package]]
 name = "slima2a"
-version = "0.6.1"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "a2a-sdk", extra = ["sqlite", "telemetry"] },
@@ -1593,13 +1597,13 @@ testing = [
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", extras = ["telemetry", "sqlite"], specifier = "==1.1.0" },
-    { name = "slim-bindings", specifier = "~=2.0" },
+    { name = "a2a-sdk", extras = ["telemetry", "sqlite"], git = "https://github.com/Tehsmash/a2a-python?branch=feat%2Fsend-live-message" },
+    { name = "slim-bindings", editable = "../slim-bindings/python" },
 ]
 
 [package.metadata.requires-dev]
 examples = [
-    { name = "a2a-sdk", extras = ["http-server"] },
+    { name = "a2a-sdk", extras = ["http-server"], git = "https://github.com/Tehsmash/a2a-python?branch=feat%2Fsend-live-message" },
     { name = "langchain-core" },
     { name = "langchain-openai" },
     { name = "typing-extensions" },

@@ -3,6 +3,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+from typing import AsyncGenerator
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
@@ -13,12 +14,12 @@ from a2a.client import (
     minimal_agent_card,
 )
 from a2a.helpers import new_text_message
-from a2a.types.a2a_pb2 import AgentCard, Role, SendMessageRequest
+from a2a.types.a2a_pb2 import AgentCard, Role, SendMessageRequest, StreamRequest
 from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
 
-from slima2a import setup_slim_client
+from slima2a import setup_slim_client, slimrpc_group_shared_channel_factory
 from slima2a.client_transport import (
     ClientConfig,
     MultiAgentClientFactory,
@@ -55,19 +56,25 @@ async def main() -> None:
     httpx_client = httpx.AsyncClient()
 
     # Initialize and connect to SLIM
-    service, slim_local_app, local_name, conn_id = await setup_slim_client(
+    service, slim_local_app, _, conn_id = await setup_slim_client(
         namespace="agntcy",
         group="demo",
         name="client",
         secret="my_shared_secret_for_testing_purposes_only",
     )
 
+    group_factory = (
+        slimrpc_group_shared_channel_factory(slim_local_app, conn_id)
+        if args.broadcast
+        else slimrpc_group_channel_factory(slim_local_app, conn_id)
+    )
     client_config = ClientConfig(
         supported_protocol_bindings=["slimrpc"],
         streaming=args.stream,
         httpx_client=httpx_client,
         slimrpc_channel_factory=slimrpc_channel_factory(slim_local_app, conn_id),
-        slimrpc_group_channel_factory=slimrpc_group_channel_factory(
+        slimrpc_group_channel_factory=group_factory,
+        slimrpc_group_shared_channel_factory=slimrpc_group_shared_channel_factory(
             slim_local_app, conn_id
         ),
     )
@@ -97,14 +104,33 @@ async def main() -> None:
 
     client = client_factory.create(card=cards)
 
-    if isinstance(client, MulticastClient):
-        print(f"> {args.text} (multicast to {agent_names})")
-        await send_message_multicast(client, args.text)
-    else:
-        logger.info("A2AClient initialized.")
-        response_text = await send_message(client, args.text)
-        print(f"> {args.text}")
-        print(response_text)
+    try:
+        if isinstance(client, MulticastClient) and args.broadcast:
+            if args.text:
+                print(f"> {args.text} (broadcast live to {agent_names})")
+                await send_live_message_broadcast(client, args.text)
+            else:
+                await interactive_live_message_broadcast(client, agent_names)
+        elif isinstance(client, MulticastClient):
+            print(f"> {args.text} (multicast to {agent_names})")
+            await send_message_multicast(client, args.text)
+        elif args.live:
+            logger.info("A2AClient initialized.")
+            if args.text:
+                print(f"> {args.text} (live)")
+                await send_live_message(client, args.text)
+            else:
+                await interactive_live_message(client)
+        else:
+            logger.info("A2AClient initialized.")
+            response_text = await send_message(client, args.text)
+            print(f"> {args.text}")
+            print(response_text)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        await client.close()
+        await httpx_client.aclose()
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -123,9 +149,25 @@ def parse_arguments() -> argparse.Namespace:
         default=False,
     )
     parser.add_argument(
+        "--live",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Use SendLiveMessage bidirectional streaming",
+    )
+    parser.add_argument(
+        "--broadcast",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Use broadcast SendLiveMessage (shared-responses) — requires multiple --agents",
+    )
+    parser.add_argument(
         "--text",
         type=str,
-        required=True,
+        required=False,
+        default=None,
+        help="Message text. If omitted in --live/--broadcast mode, reads lines from stdin interactively.",
     )
     parser.add_argument(
         "--type",
@@ -152,6 +194,10 @@ def parse_arguments() -> argparse.Namespace:
 
     if args.type not in ["slimrpc", "starlette"]:
         raise ValueError(f"Invalid client type: {args.type}")
+
+    interactive_mode = args.live or args.broadcast
+    if not interactive_mode and args.text is None:
+        parser.error("--text is required unless --live or --broadcast is set")
 
     return args
 
@@ -228,6 +274,127 @@ async def send_message_multicast(
             exc_info=True,
         )
         raise RuntimeError("failed sending multicast message") from e
+
+
+async def send_live_message(client: Client, text: str) -> None:
+    message = new_text_message(text, role=Role.ROLE_USER)
+
+    async def _requests():
+        yield StreamRequest(message=message)
+
+    output = ""
+    try:
+        async for stream_response in client.send_live_message(_requests()):
+            which = stream_response.WhichOneof("payload")
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+    except Exception as e:
+        logger.error(f"failed sending live message: {e}", exc_info=True)
+        raise RuntimeError("failed sending live message") from e
+
+    print(output)
+
+
+async def send_live_message_broadcast(client: MulticastClient, text: str) -> None:
+    message = new_text_message(text, role=Role.ROLE_USER)
+
+    async def _requests():
+        yield StreamRequest(message=message)
+
+    try:
+        async for source, stream_response in client.send_live_message(_requests()):
+            which = stream_response.WhichOneof("payload")
+            output = ""
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            if output:
+                print(f"  [{source}] {output}")
+    except Exception as e:
+        logger.error(f"failed sending broadcast live message: {e}", exc_info=True)
+        raise RuntimeError("failed sending broadcast live message") from e
+
+
+async def _stdin_lines() -> AsyncGenerator[str, None]:
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
+            line = await loop.run_in_executor(None, sys.stdin.readline)
+        except (EOFError, KeyboardInterrupt):
+            return
+        if not line:
+            return
+        line = line.rstrip("\n")
+        if line:
+            yield line
+
+
+async def interactive_live_message(client: Client) -> None:
+    print("Interactive live session (Ctrl-D or Ctrl-C to quit)")
+
+    async def _requests() -> AsyncGenerator:
+        async for line in _stdin_lines():
+            print(f"> {line}")
+            yield StreamRequest(message=new_text_message(line, role=Role.ROLE_USER))
+
+    try:
+        async for stream_response in client.send_live_message(_requests()):
+            which = stream_response.WhichOneof("payload")
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        print(part.text)
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        print(part.text)
+    except Exception as e:
+        logger.error(f"failed in interactive live session: {e}", exc_info=True)
+        raise RuntimeError("failed in interactive live session") from e
+
+
+async def interactive_live_message_broadcast(
+    client: MulticastClient, agent_names: list[str]
+) -> None:
+    print(f"Interactive broadcast session to {agent_names} (Ctrl-D or Ctrl-C to quit)")
+
+    async def _requests() -> AsyncGenerator:
+        async for line in _stdin_lines():
+            print(f"> {line}")
+            yield StreamRequest(message=new_text_message(line, role=Role.ROLE_USER))
+
+    try:
+        async for source, stream_response in client.send_live_message(_requests()):
+            which = stream_response.WhichOneof("payload")
+            output = ""
+            if which == "message":
+                for part in stream_response.message.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            elif which == "artifact_update":
+                artifact = stream_response.artifact_update.artifact
+                for part in artifact.parts:
+                    if part.WhichOneof("content") == "text":
+                        output += part.text
+            if output:
+                print(f"  [{source}] {output}")
+    except Exception as e:
+        logger.error(f"failed in interactive broadcast session: {e}", exc_info=True)
+        raise RuntimeError("failed in interactive broadcast session") from e
 
 
 if __name__ == "__main__":
