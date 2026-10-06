@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.1](https://github.com/agntcy/slim-a2a-python/compare/v0.7.0...v0.7.1) (2026-10-06)
+
+
+### Features
+
+* openssf scoreboard implementation ([#29](https://github.com/agntcy/slim-a2a-python/issues/29)) ([3966c94](https://github.com/agntcy/slim-a2a-python/commit/3966c9406c04e13637ee7625c24455df0bfb5bc0))
+
+
+### Bug Fixes
+
+* bump openssf score ([#32](https://github.com/agntcy/slim-a2a-python/issues/32)) ([9c61bf7](https://github.com/agntcy/slim-a2a-python/commit/9c61bf7dd29f3800c902b6dbd0a1cea8d1d39632))
+* return slimrpc errors to callers and enforce extended card rules ([#35](https://github.com/agntcy/slim-a2a-python/issues/35)) ([355c1d9](https://github.com/agntcy/slim-a2a-python/commit/355c1d9f0892db8190ead5edbbe466df995c5763))
+
+
+### Documentation
+
+* add CONTRIBUTORS.md file ([#31](https://github.com/agntcy/slim-a2a-python/issues/31)) ([5a3b4ae](https://github.com/agntcy/slim-a2a-python/commit/5a3b4ae30a6bb4586b137cadb1a1380a1adc3f5c))
+
 ## [0.7.0](https://github.com/agntcy/slim-a2a-python/compare/v0.6.1...v0.7.0) (2026-08-07)
 
 
