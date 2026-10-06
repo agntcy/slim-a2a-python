@@ -17,29 +17,51 @@ from a2a.server.request_handlers.request_handler import RequestHandler, validate
 from a2a.types import a2a_pb2
 from a2a.types.a2a_pb2 import AgentCard
 from a2a.utils import proto_utils
-from a2a.utils.errors import A2AError, TaskNotFoundError
-from google.protobuf import empty_pb2
-from google.rpc import code_pb2
+from a2a.utils.errors import A2A_ERROR_REASONS, A2AError, TaskNotFoundError
+from google.protobuf import any_pb2, empty_pb2
+from google.rpc import error_details_pb2, status_pb2
 
 from slima2a.types.v1 import a2a_pb2_slimrpc
 
 SlimRPCError = slim_bindings.RpcError.Rpc  # type: ignore[attr-defined]
 
 _SLIM_ERROR_CODE_MAP = {
-    types.InvalidRequestError: code_pb2.INVALID_ARGUMENT,
-    types.MethodNotFoundError: code_pb2.NOT_FOUND,
-    types.InvalidParamsError: code_pb2.INVALID_ARGUMENT,
-    types.InternalError: code_pb2.INTERNAL,
-    types.TaskNotFoundError: code_pb2.NOT_FOUND,
-    types.TaskNotCancelableError: code_pb2.FAILED_PRECONDITION,
-    types.PushNotificationNotSupportedError: code_pb2.UNIMPLEMENTED,
-    types.UnsupportedOperationError: code_pb2.UNIMPLEMENTED,
-    types.ContentTypeNotSupportedError: code_pb2.INVALID_ARGUMENT,
-    types.InvalidAgentResponseError: code_pb2.INTERNAL,
-    types.ExtendedAgentCardNotConfiguredError: code_pb2.FAILED_PRECONDITION,
-    types.ExtensionSupportRequiredError: code_pb2.FAILED_PRECONDITION,
-    types.VersionNotSupportedError: code_pb2.UNIMPLEMENTED,
+    types.InvalidRequestError: slim_bindings.RpcCode.INVALID_ARGUMENT,
+    types.MethodNotFoundError: slim_bindings.RpcCode.NOT_FOUND,
+    types.InvalidParamsError: slim_bindings.RpcCode.INVALID_ARGUMENT,
+    types.InternalError: slim_bindings.RpcCode.INTERNAL,
+    types.TaskNotFoundError: slim_bindings.RpcCode.NOT_FOUND,
+    types.TaskNotCancelableError: slim_bindings.RpcCode.FAILED_PRECONDITION,
+    types.PushNotificationNotSupportedError: slim_bindings.RpcCode.UNIMPLEMENTED,
+    types.UnsupportedOperationError: slim_bindings.RpcCode.UNIMPLEMENTED,
+    types.ContentTypeNotSupportedError: slim_bindings.RpcCode.INVALID_ARGUMENT,
+    types.InvalidAgentResponseError: slim_bindings.RpcCode.INTERNAL,
+    types.ExtendedAgentCardNotConfiguredError: slim_bindings.RpcCode.FAILED_PRECONDITION,
+    types.ExtensionSupportRequiredError: slim_bindings.RpcCode.FAILED_PRECONDITION,
+    types.VersionNotSupportedError: slim_bindings.RpcCode.UNIMPLEMENTED,
 }
+
+#: `ErrorInfo.domain` for A2A errors (A2A §11.6), as a2a-sdk's gRPC handler sets it.
+A2A_ERROR_DOMAIN = "a2a-protocol.org"
+
+
+def _status_details(error: A2AError, code: slim_bindings.RpcCode) -> bytes:
+    """A serialized `google.rpc.Status` carrying the error's `ErrorInfo`.
+
+    A2A §11.6 requires an `ErrorInfo` whose `reason` names the A2A error: the
+    status code alone cannot, since several errors share one code (three map to
+    FAILED_PRECONDITION). slimrpc carries the Status in `RpcError.details`,
+    where gRPC puts it in the `grpc-status-details-bin` trailer.
+    """
+    info = error_details_pb2.ErrorInfo(
+        reason=A2A_ERROR_REASONS.get(type(error), "UNKNOWN_ERROR"),
+        domain=A2A_ERROR_DOMAIN,
+    )
+    detail = any_pb2.Any()
+    detail.Pack(info)
+    status = status_pb2.Status(code=code.value, message=error.message)
+    status.details.append(detail)
+    return status.SerializeToString()
 
 
 class CallContextBuilder(ABC):
@@ -106,11 +128,11 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
 
     async def raise_error_response(self, error: A2AError) -> None:
         """Raises SlimRPC errors appropriately."""
-        code = _SLIM_ERROR_CODE_MAP.get(type(error), code_pb2.UNKNOWN)
+        code = _SLIM_ERROR_CODE_MAP.get(type(error), slim_bindings.RpcCode.UNKNOWN)
         raise SlimRPCError(
             code=code,
             message=f"{type(error).__name__}: {error.message}",
-            details=None,
+            details=_status_details(error, code),
         )
 
     async def SendMessage(
@@ -285,8 +307,21 @@ class SRPCHandler(a2a_pb2_slimrpc.A2AServiceServicer):
         request: a2a_pb2.GetExtendedAgentCardRequest,
         context: slim_bindings.Context,
     ) -> a2a_pb2.AgentCard:
-        """Get the extended agent card for the agent served."""
-        card_to_serve = self.agent_card
+        """Handles the 'GetExtendedAgentCard' SlimRPC method.
+
+        Delegates to the request handler, as a2a-sdk's gRPC handler does, so
+        an agent that does not advertise `capabilities.extendedAgentCard`
+        answers UnsupportedOperationError (A2A REQ-SEC-025) instead of handing
+        out its public card. `card_modifier` still applies to what is served.
+        """
+        try:
+            server_context = self._build_call_context(context, request)
+            card_to_serve = await self.request_handler.on_get_extended_agent_card(
+                request, server_context
+            )
+        except A2AError as e:
+            await self.raise_error_response(e)
+            return a2a_pb2.AgentCard()
         if self.card_modifier:
             card_to_serve = self.card_modifier(card_to_serve)
         return card_to_serve
