@@ -1,0 +1,26 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+# The ITK agent for slima2a: what the A2A Integration Test Kit launches as the
+# system under test. Kept as its own project so the library's dependencies do
+# not grow the extras only this agent needs (gRPC, an HTTP server).
+#
+# slima2a comes from the parent directory, so the ITK always tests the working
+# copy it was mounted from, never a published release.
+
+[project]
+name = "slima2a-itk"
+version = "0.1.0"
+description = "A2A ITK agent for slima2a"
+requires-python = ">=3.10, <4.0"
+dependencies = [
+    "slima2a",
+    "a2a-sdk[grpc,http-server]==1.1.0",
+    "uvicorn>=0.34.2",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+slima2a = { path = "..", editable = true }

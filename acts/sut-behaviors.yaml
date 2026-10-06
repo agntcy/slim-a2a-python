@@ -1,0 +1,65 @@
+# The ACTS SUT behaviors the ITK agent (itk/tck_executor.py) implements.
+#
+# The A2A Integration Test Kit reads this file to decide which conformance
+# tests slima2a is graded on: a test needing a prefix not listed here FAILS
+# rather than skips, so missing support stays visible in the report.
+acts_version: "1.0"
+behaviors:
+  - prefix: tck-complete-task
+    description: Returns a task in TASK_STATE_COMPLETED.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+  - prefix: tck-message-response
+    description: Returns a bare agent message, never a task.
+    response_type: message
+  - prefix: tck-multi-turn
+    description: Asks for input until a follow-up says "done", then completes.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+  - prefix: tck-long-running
+    description: Works for a few seconds, then completes.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    delay_ms: 3000
+  - prefix: tck-cancel
+    description: Works until canceled; completes after 60s if nobody does.
+    response_type: task
+    terminal_state: TASK_STATE_CANCELED
+  - prefix: tck-task-failure
+    description: Fails the task with a status message.
+    response_type: task
+    terminal_state: TASK_STATE_FAILED
+  - prefix: tck-auth-required
+    description: Moves the task to TASK_STATE_AUTH_REQUIRED with a status message.
+    response_type: task
+    terminal_state: TASK_STATE_AUTH_REQUIRED
+  - prefix: tck-stream-basic
+    description: Streams a working status, an artifact, then completion.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    streaming: true
+  - prefix: tck-artifact-text
+    description: Completes with a text artifact.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    artifacts: [{kind: text}]
+  - prefix: tck-artifact-data
+    description: Completes with a structured data artifact.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    artifacts: [{kind: data}]
+  - prefix: tck-artifact-file
+    description: Completes with an inline file artifact.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    artifacts: [{kind: file}]
+  - prefix: tck-artifact-file-url
+    description: Completes with a file artifact referenced by URL.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    artifacts: [{kind: file-url}]
+  - prefix: tck-stream-chunked
+    description: Streams one artifact in two appended chunks, then completes.
+    response_type: task
+    terminal_state: TASK_STATE_COMPLETED
+    streaming: true
