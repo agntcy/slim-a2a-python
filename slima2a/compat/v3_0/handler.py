@@ -33,7 +33,6 @@ from a2a.utils.errors import (
     UnsupportedOperationError,
 )
 from google.protobuf import empty_pb2
-from google.rpc import code_pb2
 
 from slima2a.types.v0 import a2a_pb2_slimrpc
 
@@ -41,17 +40,17 @@ logger = logging.getLogger(__name__)
 
 SlimRPCError = slim_bindings.RpcError.Rpc  # type: ignore[attr-defined]
 
-_SLIM_ERROR_CODE_MAP: dict[type[A2AError], int] = {
-    InvalidRequestError: code_pb2.INVALID_ARGUMENT,
-    MethodNotFoundError: code_pb2.NOT_FOUND,
-    InvalidParamsError: code_pb2.INVALID_ARGUMENT,
-    InternalError: code_pb2.INTERNAL,
-    TaskNotFoundError: code_pb2.NOT_FOUND,
-    TaskNotCancelableError: code_pb2.FAILED_PRECONDITION,
-    PushNotificationNotSupportedError: code_pb2.UNIMPLEMENTED,
-    UnsupportedOperationError: code_pb2.UNIMPLEMENTED,
-    ContentTypeNotSupportedError: code_pb2.INVALID_ARGUMENT,
-    InvalidAgentResponseError: code_pb2.INTERNAL,
+_SLIM_ERROR_CODE_MAP: dict[type[A2AError], slim_bindings.RpcCode] = {
+    InvalidRequestError: slim_bindings.RpcCode.INVALID_ARGUMENT,
+    MethodNotFoundError: slim_bindings.RpcCode.NOT_FOUND,
+    InvalidParamsError: slim_bindings.RpcCode.INVALID_ARGUMENT,
+    InternalError: slim_bindings.RpcCode.INTERNAL,
+    TaskNotFoundError: slim_bindings.RpcCode.NOT_FOUND,
+    TaskNotCancelableError: slim_bindings.RpcCode.FAILED_PRECONDITION,
+    PushNotificationNotSupportedError: slim_bindings.RpcCode.UNIMPLEMENTED,
+    UnsupportedOperationError: slim_bindings.RpcCode.UNIMPLEMENTED,
+    ContentTypeNotSupportedError: slim_bindings.RpcCode.INVALID_ARGUMENT,
+    InvalidAgentResponseError: slim_bindings.RpcCode.INTERNAL,
 }
 
 
@@ -109,7 +108,7 @@ class SRPCCompatHandler(a2a_pb2_slimrpc.A2AServiceServicer):
 
     async def raise_error_response(self, error: A2AError) -> None:
         """Raises SlimRPC errors appropriately."""
-        code = _SLIM_ERROR_CODE_MAP.get(type(error), code_pb2.UNKNOWN)
+        code = _SLIM_ERROR_CODE_MAP.get(type(error), slim_bindings.RpcCode.UNKNOWN)
         raise SlimRPCError(
             code=code,
             message=f"{type(error).__name__}: {error.message}",
