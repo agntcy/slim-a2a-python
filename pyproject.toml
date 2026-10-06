@@ -72,6 +72,12 @@ module = ["slim_bindings.*"]
 follow_untyped_imports = true
 #ignore_missing_imports = true
 
+# The ITK agent (itk/) runs from its own environment, which adds grpcio and
+# imports its sibling module directly; the library's lint env has neither.
+[[tool.mypy.overrides]]
+module = ["grpc", "grpc.*", "tck_executor"]
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = ["slima2a.types.v0.a2a_pb2_slimrpc"]
 ignore_errors = true
