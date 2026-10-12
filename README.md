@@ -33,6 +33,8 @@ SlimRPC bindings. Use `task generate-v0` / `task generate-v1` to regenerate one 
 ### Quick Start (Recommended)
 
 ```python
+import os
+
 import slim_bindings
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
@@ -46,6 +48,7 @@ service, local_app, local_name, conn_id = await setup_slim_client(
     namespace="agntcy",
     group="demo",
     name="echo_agent",
+    secret=os.environ["SLIM_SHARED_SECRET"],  # or identity=..., see below
 )
 
 # Create request handler
@@ -79,6 +82,7 @@ If you need more control over the SLIM configuration:
 
 ```python
 import asyncio
+import os
 
 import slim_bindings
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -113,9 +117,10 @@ local_name = slim_bindings.Name("agntcy", "demo", "echo_agent")
 client_config = slim_bindings.new_insecure_client_config("http://localhost:46357")
 conn_id = await service.connect_async(client_config)
 
-# Create app with shared secret
+# Create app with a shared secret (>= 32 chars), or use
+# service.create_app(local_name, provider, verifier) for a real identity
 local_app = service.create_app_with_secret(
-    local_name, "secretsecretsecretsecretsecretsecret"
+    local_name, os.environ["SLIM_SHARED_SECRET"]
 )
 
 # Subscribe to local name
@@ -174,6 +179,8 @@ it converts to and from the v0.3 wire types internally.
 ### Quick Start (Recommended)
 
 ```python
+import os
+
 import httpx
 from a2a.client import minimal_agent_card
 from a2a.helpers import new_text_message
@@ -191,6 +198,7 @@ service, slim_local_app, local_name, conn_id = await setup_slim_client(
     namespace="agntcy",
     group="demo",
     name="client",
+    secret=os.environ["SLIM_SHARED_SECRET"],  # or identity=..., see below
 )
 
 # Create client config
@@ -238,6 +246,7 @@ If you need more control over the SLIM configuration:
 
 ```python
 import asyncio
+import os
 
 import httpx
 import slim_bindings
@@ -277,9 +286,10 @@ local_name = slim_bindings.Name("agntcy", "demo", "client")
 client_config_slim = slim_bindings.new_insecure_client_config("http://localhost:46357")
 conn_id = await service.connect_async(client_config_slim)
 
-# Create app with shared secret
+# Create app with a shared secret (>= 32 chars), or use
+# service.create_app(local_name, provider, verifier) for a real identity
 slim_local_app = service.create_app_with_secret(
-    local_name, "secretsecretsecretsecretsecretsecret"
+    local_name, os.environ["SLIM_SHARED_SECRET"]
 )
 
 # Subscribe to local name
@@ -370,13 +380,109 @@ async for source, stream_response in client.send_message(request):
 `source` is a `RpcMessageContext` identifying the agent that produced the response,
 so replies from different agents can be told apart as they interleave.
 
+## Identity and node connection
+
+`setup_slim_client` and `connect_and_subscribe` configure two independent things:
+
+- **App identity** (required, exactly one): `secret`, a shared secret (>= 32
+  chars), or `identity=SlimIdentity(provider, verifier)`, any
+  `IdentityProviderConfig` / `IdentityVerifierConfig` the bindings support
+  (shared secret, static or signed JWT including EdDSA, JWT verification with
+  PEM/JWK/JWKS keys, SPIRE). It is passed to `Service.create_app`. There is
+  **no default secret**: omitting both raises `ValueError`.
+- **Node connection** (optional, at most one): `slim_url` for a plaintext
+  connection (default `http://localhost:46357`), or `client_config`, a full
+  `slim_bindings.ClientConfig` with TLS, auth, headers and timeouts.
+
+Conflicting pairs (`secret` + `identity`, `slim_url` + `client_config`) raise
+`ValueError` before any connection is opened.
+
+With a shared secret, anyone who holds the secret can claim any SLIM name. A
+per-agent JWT identity binds each app to a key you control. Every member of a
+session needs a compatible identity type. Here an agent signs its own Ed25519
+JWT, trusts tokens verified against a JWKS file, and connects to a node over
+TLS with a bearer token:
+
+```python
+from datetime import timedelta
+
+import slim_bindings
+
+from slima2a import SlimIdentity, setup_slim_client
+
+name = "agntcy/demo/my_agent"
+hour = timedelta(hours=1)
+
+identity = SlimIdentity(
+    provider=slim_bindings.IdentityProviderConfig.JWT(
+        config=slim_bindings.ClientJwtAuth(
+            key=slim_bindings.JwtKeyType.ENCODING(
+                key=slim_bindings.JwtKeyConfig(
+                    algorithm=slim_bindings.JwtAlgorithm.ED_DSA,
+                    format=slim_bindings.JwtKeyFormat.PEM,
+                    key=slim_bindings.JwtKeyData.FILE(path="/etc/slim/agent-key.pem"),
+                )
+            ),
+            audience=["agntcy/demo"],
+            issuer="agntcy",
+            subject=name,
+            duration=hour,
+        )
+    ),
+    verifier=slim_bindings.IdentityVerifierConfig.JWT(
+        config=slim_bindings.JwtAuth(
+            # A JWKS file of trusted public keys acts as the allowlist.
+            key=slim_bindings.JwtKeyType.DECODING(
+                key=slim_bindings.JwtKeyConfig(
+                    algorithm=slim_bindings.JwtAlgorithm.ED_DSA,
+                    format=slim_bindings.JwtKeyFormat.JWKS,
+                    key=slim_bindings.JwtKeyData.FILE(path="/etc/slim/trusted.jwks.json"),
+                )
+            ),
+            audience=["agntcy/demo"],
+            issuer="agntcy",
+            subject=None,
+            duration=hour,
+        )
+    ),
+)
+
+# TLS (system CA pool) plus a bearer token read from a file.
+client_config = slim_bindings.new_secure_client_config("https://slim.example.com:443")
+client_config.auth = slim_bindings.ClientAuthenticationConfig.STATIC_JWT(
+    config=slim_bindings.StaticJwtAuth(
+        token_file="/var/run/secrets/slim/token", duration=hour
+    )
+)
+
+service, local_app, local_name, conn_id = await setup_slim_client(
+    "agntcy", "demo", "my_agent", identity=identity, client_config=client_config
+)
+```
+
+[`tests/test_identity_e2e.py`](tests/test_identity_e2e.py) runs the same
+identity setup end to end with an in-memory key.
+
+### Caller identity on the server
+
+`SRPCHandler`'s `DefaultCallContextBuilder` sets the caller to
+`UnauthenticatedUser`. The slimrpc server `Context` in `slim-bindings` 2.x
+exposes no source name or verified identity for the caller, only the session
+id, deadline and caller-supplied metadata. SLIM still verifies the peer's
+identity before a request reaches the handler, but the handler cannot see who
+the peer is. Metadata is set by the caller and is not used as identity.
+Exposing the verified subject/issuer depends on a bindings upgrade.
+
 ## Helper Functions
 
 The `slima2a` package provides convenient helper functions to simplify SLIM setup:
 
-- **`setup_slim_client(namespace, group, name, slim_url="http://localhost:46357", secret="...", log_level="info")`** - Complete SLIM client setup in one call
+- **`setup_slim_client(namespace, group, name, slim_url=None, secret=None, log_level="info", *, identity=None, client_config=None)`** - Complete SLIM client setup in one call
 - **`initialize_slim_service(log_level="info")`** - Initialize SLIM service with default configuration
-- **`connect_and_subscribe(service, local_name, slim_url="http://localhost:46357", secret="...")`** - Connect to SLIM server and subscribe to a local name
+- **`connect_and_subscribe(service, local_name, slim_url=None, secret=None, *, identity=None, client_config=None)`** - Connect to SLIM server and subscribe to a local name
+
+Both require exactly one of `secret` or `identity`; see
+[Identity and node connection](#identity-and-node-connection).
 
 ## Examples
 
@@ -386,4 +492,7 @@ Runnable end-to-end examples live under [`examples/`](examples):
   streaming, A2A v0.3 compatibility and multicast
 - [`examples/travel_planner_agent`](examples/travel_planner_agent) - a LangChain-based agent
 
-They expect a SLIM node reachable at `http://localhost:46357`.
+They expect a SLIM node reachable at `http://localhost:46357`, and use the
+shared secret from `$SLIM_SHARED_SECRET` (or `--secret` for the echo agent),
+falling back to a publicly known demo-only placeholder that the sibling
+slim-a2a SDK examples share.
