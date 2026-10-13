@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/agntcy/slim-a2a-python/compare/v0.7.1...v0.8.0) (2026-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* configurable SLIM identity and node connection ([#37](https://github.com/agntcy/slim-a2a-python/issues/37))
+
+### Features
+
+* configurable SLIM identity and node connection ([#37](https://github.com/agntcy/slim-a2a-python/issues/37)) ([c41e1ba](https://github.com/agntcy/slim-a2a-python/commit/c41e1bada8532cb46ead7a203f1771b36259d82d))
+
 ## [0.7.1](https://github.com/agntcy/slim-a2a-python/compare/v0.7.0...v0.7.1) (2026-10-06)
 
 
