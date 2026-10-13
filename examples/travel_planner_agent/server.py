@@ -20,6 +20,7 @@ from a2a.types.a2a_pb2 import (
     AgentSkill,
 )
 
+from examples.demo_secret import default_secret
 from examples.travel_planner_agent.agent_executor import TravelPlannerAgentExecutor
 from slima2a import setup_slim_client
 
@@ -57,7 +58,7 @@ async def main() -> None:
         namespace="agntcy",
         group="demo",
         name="travel_planner_agent",
-        secret="my_shared_secret_for_testing_purposes_only",
+        secret=default_secret(),
     )
 
     # Create server

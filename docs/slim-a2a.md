@@ -24,6 +24,7 @@ The quick start approach uses the `setup_slim_client` helper function to simplif
 
 ```python
 import asyncio
+import os
 import slim_bindings
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
@@ -36,6 +37,7 @@ service, local_app, local_name, conn_id = await setup_slim_client(
     namespace="agntcy",
     group="demo",
     name="echo_agent",
+    secret=os.environ["SLIM_SHARED_SECRET"],  # or identity=SlimIdentity(...)
 )
 
 # Create request handler
@@ -66,6 +68,7 @@ await server.serve_async()
 
     ```python
     import asyncio
+    import os
     import slim_bindings
     from a2a.server.request_handlers import DefaultRequestHandler
     from a2a.server.tasks import InMemoryTaskStore
@@ -96,9 +99,10 @@ await server.serve_async()
     client_config = slim_bindings.new_insecure_client_config("http://localhost:46357")
     conn_id = await service.connect_async(client_config)
 
-    # Create app with shared secret
+    # Create app with a shared secret (>= 32 chars), or use
+    # service.create_app(local_name, provider, verifier) for a real identity
     local_app = service.create_app_with_secret(
-        local_name, "secretsecretsecretsecretsecretsecret"
+        local_name, os.environ["SLIM_SHARED_SECRET"]
     )
 
     # Subscribe to local name
@@ -128,7 +132,7 @@ await server.serve_async()
     
     * **SLIM Bindings Initialization**: Set up the event loop and initialize `slim_bindings` with tracing and runtime configurations.
     * **SLIM Name Creation**: Create a `slim_bindings.Name` object with namespace, group, and name components.
-    * **Connection Setup**: Connect to the SLIM server and create an app with a shared secret for MLS (Message Layer Security).
+    * **Connection Setup**: Connect to the SLIM server and create an app with an identity for MLS (Message Layer Security): a shared secret, or a provider/verifier pair (JWT, SPIRE) via `service.create_app`.
     * **Server Creation**: Use `slim_bindings.Server.new_with_connection()` instead of a standard HTTP server.
     * **Service Registration**: Register the servicer using `add_A2AServiceServicer_to_server()` from the generated SLIMRPC code.
 
@@ -140,6 +144,7 @@ Similar to the server, SLIM A2A provides both quick start and advanced client se
 
 ```python
 import asyncio
+import os
 import httpx
 from a2a.client import ClientFactory, minimal_agent_card
 from a2a.types import Message, Part, Role, TextPart
@@ -151,6 +156,7 @@ service, slim_local_app, local_name, conn_id = await setup_slim_client(
     namespace="agntcy",
     group="demo",
     name="client",
+    secret=os.environ["SLIM_SHARED_SECRET"],  # or identity=SlimIdentity(...)
 )
 
 # Create client config
@@ -192,6 +198,7 @@ async for event in client.send_message(request=request):
 
     ```python
     import asyncio
+    import os
     import httpx
     import slim_bindings
     from a2a.client import ClientFactory, minimal_agent_card
@@ -222,9 +229,10 @@ async for event in client.send_message(request=request):
     client_config_slim = slim_bindings.new_insecure_client_config("http://localhost:46357")
     conn_id = await service.connect_async(client_config_slim)
 
-    # Create app with shared secret
+    # Create app with a shared secret (>= 32 chars), or use
+    # service.create_app(local_name, provider, verifier) for a real identity
     slim_local_app = service.create_app_with_secret(
-        local_name, "secretsecretsecretsecretsecretsecret"
+        local_name, os.environ["SLIM_SHARED_SECRET"]
     )
 
     # Subscribe to local name
@@ -272,9 +280,9 @@ async for event in client.send_message(request=request):
 
 The `slima2a` package provides convenient helper functions to simplify SLIM setup:
 
-- `setup_slim_client(namespace, group, name, slim_url="http://localhost:46357", secret="...", log_level="info")`: Complete SLIM client setup in one call. Returns `(service, local_app, local_name, conn_id)`.
+- `setup_slim_client(namespace, group, name, slim_url=None, secret=None, log_level="info", *, identity=None, client_config=None)`: Complete SLIM client setup in one call. Returns `(service, local_app, local_name, conn_id)`.
 - `initialize_slim_service(log_level="info")`: Initialize SLIM service with default configuration.
-- `connect_and_subscribe(service, local_name, slim_url="http://localhost:46357", secret="...")`: Connect to SLIM server and subscribe to a local name.
+- `connect_and_subscribe(service, local_name, slim_url=None, secret=None, *, identity=None, client_config=None)`: Connect to SLIM server and subscribe to a local name.
 - `slimrpc_channel_factory(local_app, conn_id)`: Creates a channel factory function for use with A2A client configuration.
 
 ## Configuration Parameters
@@ -284,8 +292,14 @@ The `slima2a` package provides convenient helper functions to simplify SLIM setu
 - `namespace`: The namespace component of the SLIM name (e.g., `agntcy`).
 - `group`: The group component of the SLIM name (e.g., `demo`).
 - `name`: The name component of the SLIM name (e.g., `echo_agent`).
-- `slim_url`: The endpoint URL for the SLIM server (default: `http://localhost:46357`).
-- `shared_secret`: A secret string used for MLS (Message Layer Security). Must be at least 32 characters.
+- `slim_url`: The endpoint URL of the SLIM node, over a plaintext connection (default: `http://localhost:46357`). Mutually exclusive with `client_config`.
+- `client_config`: A full `slim_bindings.ClientConfig` for the node connection (TLS, bearer/JWT/basic auth, headers, timeouts), for example from `slim_bindings.new_secure_client_config(...)`. Replaces `slim_url`.
+- `secret`: A shared secret used for MLS (Message Layer Security). Must be at least 32 characters. Anyone who holds it can claim any SLIM name.
+- `identity`: A `slima2a.SlimIdentity(provider, verifier)` with any `slim_bindings.IdentityProviderConfig` / `IdentityVerifierConfig` (shared secret, static or signed JWT including EdDSA, JWT verification with PEM/JWK/JWKS keys, SPIRE), passed to `Service.create_app`.
+
+Exactly one of `secret` or `identity` is required; there is no default secret. Missing or conflicting options raise `ValueError` before any connection is opened. See the [README](https://github.com/agntcy/slim-a2a-python#identity-and-node-connection) for a JWT identity with a TLS connection.
+
+The server's `DefaultCallContextBuilder` sets the caller to `UnauthenticatedUser`: in `slim-bindings` 2.x the slimrpc server `Context` exposes only the session id, deadline and caller-supplied metadata, not the caller's verified identity. Metadata is set by the caller and is not used as identity.
 
 ### Logging
 

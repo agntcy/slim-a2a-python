@@ -19,6 +19,7 @@ from a2a.client import (
 from a2a.helpers import new_text_message
 from a2a.types.a2a_pb2 import Role, SendMessageRequest
 
+from examples.demo_secret import default_secret
 from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
@@ -84,7 +85,7 @@ async def main() -> None:
         namespace="agntcy",
         group="demo",
         name="client",
-        secret="my_shared_secret_for_testing_purposes_only",
+        secret=default_secret(),
     )
 
     client_config = ClientConfig(

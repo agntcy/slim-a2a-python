@@ -78,7 +78,16 @@ def get_metadata_value(context: slim_bindings.Context, key: str) -> str:
 
 
 class DefaultCallContextBuilder(CallContextBuilder):
-    """A default implementation of CallContextBuilder."""
+    """A default implementation of CallContextBuilder.
+
+    The caller is always ``UnauthenticatedUser``: the slimrpc server
+    ``Context`` in slim-bindings 2.x exposes only the session id, deadline and
+    caller-supplied metadata, not the SLIM name or verified identity of the
+    sender. SLIM still verifies the peer's identity before a request reaches
+    the handler, but the handler cannot see who the peer is. Metadata is set
+    by the caller and must not be treated as an identity. Supply a custom
+    ``CallContextBuilder`` to apply your own policy.
+    """
 
     def build(self, context: slim_bindings.Context) -> ServerCallContext:
         """Builds the ServerCallContext."""

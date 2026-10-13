@@ -18,6 +18,7 @@ from a2a.utils.constants import (
     AGENT_CARD_WELL_KNOWN_PATH,
 )
 
+from examples.demo_secret import default_secret
 from slima2a import setup_slim_client
 from slima2a.client_transport import (
     ClientConfig,
@@ -59,7 +60,7 @@ async def main() -> None:
         namespace="agntcy",
         group="demo",
         name="client",
-        secret="my_shared_secret_for_testing_purposes_only",
+        secret=args.secret,
     )
 
     client_config = ClientConfig(
@@ -139,6 +140,14 @@ def parse_arguments() -> argparse.Namespace:
         required=False,
         default="v1",
         choices=["v0", "v1"],
+    )
+    parser.add_argument(
+        "--secret",
+        type=str,
+        required=False,
+        default=default_secret(),
+        help="Shared secret (>= 32 chars) for the SLIM app. Defaults to "
+        "$SLIM_SHARED_SECRET, else a publicly known demo-only placeholder.",
     )
     parser.add_argument(
         "--agents",

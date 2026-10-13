@@ -53,3 +53,7 @@ uv run python -m examples.travel_planner_agent.server
 ```bash
 uv run python -m examples.travel_planner_agent.client
 ```
+
+Server and client authenticate with the shared secret in `SLIM_SHARED_SECRET`
+(>= 32 chars, same value on both sides). If it is unset they fall back to a
+publicly known demo-only placeholder; the library itself has no default secret.

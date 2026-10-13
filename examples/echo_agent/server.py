@@ -17,6 +17,7 @@ from a2a.types.a2a_pb2 import (
     AgentSkill,
 )
 
+from examples.demo_secret import default_secret
 from examples.echo_agent.echo_agent_executor import EchoAgentExecutor
 from slima2a import setup_slim_client
 
@@ -62,7 +63,7 @@ async def main() -> None:
                 namespace="agntcy",
                 group="demo",
                 name=args.name,
-                secret="my_shared_secret_for_testing_purposes_only",
+                secret=args.secret,
             )
 
             # Create server
@@ -118,6 +119,14 @@ def parse_arguments() -> argparse.Namespace:
 
     parser.add_argument("--type", type=str, required=False, default="slimrpc")
     parser.add_argument("--name", type=str, required=False, default="echo_agent")
+    parser.add_argument(
+        "--secret",
+        type=str,
+        required=False,
+        default=default_secret(),
+        help="Shared secret (>= 32 chars) for the SLIM app. Defaults to "
+        "$SLIM_SHARED_SECRET, else a publicly known demo-only placeholder.",
+    )
 
     parser.add_argument(
         "--log-level",
