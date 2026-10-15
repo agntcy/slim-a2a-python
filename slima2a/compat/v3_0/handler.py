@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterable, Callable
 
 import slim_bindings
-from a2a.auth.user import UnauthenticatedUser
 from a2a.compat.v0_3 import (
     a2a_v0_3_pb2,
     conversions,
@@ -34,6 +33,7 @@ from a2a.utils.errors import (
 )
 from google.protobuf import empty_pb2
 
+from slima2a.identity import user_from_context
 from slima2a.types.v0 import a2a_pb2_slimrpc
 
 logger = logging.getLogger(__name__)
@@ -70,18 +70,18 @@ class CallContextBuilder(ABC):
 class DefaultCallContextBuilder(CallContextBuilder):
     """A default implementation of CallContextBuilder.
 
-    The caller is always ``UnauthenticatedUser``: the slimrpc server
-    ``Context`` in slim-bindings 2.x exposes only the session id, deadline and
-    caller-supplied metadata, not the SLIM name or verified identity of the
-    sender. SLIM still verifies the peer's identity before a request reaches
-    the handler, but the handler cannot see who the peer is. Metadata is set
-    by the caller and must not be treated as an identity. Supply a custom
-    ``CallContextBuilder`` to apply your own policy.
+    The caller is a :class:`slima2a.identity.SlimUser` carrying the verified
+    subject and issuer of the token the caller set up the MLS session with
+    (``Context.peer_subject()`` / ``peer_issuer()``), or ``UnauthenticatedUser``
+    when the session has no verified subject. In a group session the subject
+    is the MLS sender of the request. Caller-supplied metadata is never used
+    as identity. Supply a custom ``CallContextBuilder`` to apply your own
+    policy.
     """
 
     def build(self, context: slim_bindings.Context) -> ServerCallContext:
         """Builds the ServerCallContext."""
-        user = UnauthenticatedUser()
+        user = user_from_context(context)
         state = {"slim_context": context}
         return ServerCallContext(
             user=user,

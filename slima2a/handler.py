@@ -7,7 +7,6 @@ from collections.abc import AsyncIterable, Callable
 
 import slim_bindings
 from a2a import types
-from a2a.auth.user import UnauthenticatedUser
 from a2a.extensions.common import (
     HTTP_EXTENSION_HEADER,
     get_requested_extensions,
@@ -21,6 +20,7 @@ from a2a.utils.errors import A2A_ERROR_REASONS, A2AError, TaskNotFoundError
 from google.protobuf import any_pb2, empty_pb2
 from google.rpc import error_details_pb2, status_pb2
 
+from slima2a.identity import user_from_context
 from slima2a.types.v1 import a2a_pb2_slimrpc
 
 SlimRPCError = slim_bindings.RpcError.Rpc  # type: ignore[attr-defined]
@@ -80,18 +80,18 @@ def get_metadata_value(context: slim_bindings.Context, key: str) -> str:
 class DefaultCallContextBuilder(CallContextBuilder):
     """A default implementation of CallContextBuilder.
 
-    The caller is always ``UnauthenticatedUser``: the slimrpc server
-    ``Context`` in slim-bindings 2.x exposes only the session id, deadline and
-    caller-supplied metadata, not the SLIM name or verified identity of the
-    sender. SLIM still verifies the peer's identity before a request reaches
-    the handler, but the handler cannot see who the peer is. Metadata is set
-    by the caller and must not be treated as an identity. Supply a custom
-    ``CallContextBuilder`` to apply your own policy.
+    The caller is a :class:`slima2a.identity.SlimUser` carrying the verified
+    subject and issuer of the token the caller set up the MLS session with
+    (``Context.peer_subject()`` / ``peer_issuer()``), or ``UnauthenticatedUser``
+    when the session has no verified subject. In a group session the subject
+    is the MLS sender of the request. Caller-supplied metadata is never used
+    as identity. Supply a custom ``CallContextBuilder`` to apply your own
+    policy.
     """
 
     def build(self, context: slim_bindings.Context) -> ServerCallContext:
         """Builds the ServerCallContext."""
-        user = UnauthenticatedUser()
+        user = user_from_context(context)
         state = {"slim_context": context}
         return ServerCallContext(
             user=user,

@@ -5,8 +5,8 @@
 
 An agent bootstrapped through ``connect_and_subscribe`` with a JWT identity
 serves an A2A ``SendMessage`` from a client whose token is signed by the
-trusted key, and a caller whose token is signed by an untrusted key is
-rejected.
+trusted key, the handler sees that client's verified ``sub`` / ``iss``, and
+a caller whose token is signed by an untrusted key is rejected.
 """
 
 import asyncio
@@ -17,6 +17,7 @@ from datetime import timedelta
 
 import pytest
 import slim_bindings
+from a2a.auth.user import User
 from a2a.helpers import new_text_message
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -30,7 +31,12 @@ from a2a.types.a2a_pb2 import (
     SendMessageRequest,
 )
 
-from slima2a import SlimIdentity, connect_and_subscribe, initialize_slim_service
+from slima2a import (
+    SlimIdentity,
+    SlimUser,
+    connect_and_subscribe,
+    initialize_slim_service,
+)
 from slima2a.handler import SRPCHandler
 from slima2a.types.v1.a2a_pb2_slimrpc import (
     A2AServiceStub,
@@ -107,7 +113,13 @@ def jwt_identity(subject: str, signing_key: str = TRUSTED_PRIVATE) -> SlimIdenti
 
 
 class EchoExecutor(AgentExecutor):
+    """Echoes the input; records the caller the handler saw."""
+
+    def __init__(self) -> None:
+        self.users: list[User] = []
+
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        self.users.append(context.call_context.user)
         await event_queue.enqueue_event(
             new_text_message(
                 context.get_user_input(),
@@ -159,10 +171,11 @@ class Mesh:
             slim_url=SLIM_URL,
             identity=jwt_identity(f"agntcy/demo/{AGENT}"),
         )
+        self.executor = EchoExecutor()
         handler = SRPCHandler(
             AGENT_CARD,
             DefaultRequestHandler(
-                agent_executor=EchoExecutor(),
+                agent_executor=self.executor,
                 task_store=InMemoryTaskStore(),
                 agent_card=AGENT_CARD,
             ),
@@ -225,6 +238,9 @@ def test_accepts_caller_with_trusted_jwt(
         return response.message.parts[0].text
 
     assert loop.run_until_complete(scenario()) == "hello with jwt"
+    # The handler sees the subject and issuer verified from the caller's token.
+    assert mesh.executor.users[-1] == SlimUser("agntcy/demo/jwt_client", ISSUER)
+    assert mesh.executor.users[-1].is_authenticated
 
 
 def test_rejects_caller_with_untrusted_jwt(

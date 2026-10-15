@@ -75,8 +75,9 @@ await server.serve_async()
     from slima2a.handler import SRPCHandler
     from slima2a.types.a2a_pb2_slimrpc import add_A2AServiceServicer_to_server
 
-    # Set the event loop for slim_bindings
-    slim_bindings.slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
+    # Set the event loop for slim_bindings (registers it on both the core and
+    # slimrpc namespaces)
+    slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
 
     # Initialize slim_bindings service
     tracing_config = slim_bindings.new_tracing_config()
@@ -205,8 +206,9 @@ async for event in client.send_message(request=request):
     from a2a.types import Message, Part, Role, TextPart
     from slima2a.client_transport import ClientConfig, SRPCTransport, slimrpc_channel_factory
 
-    # Set the event loop for slim_bindings
-    slim_bindings.slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
+    # Set the event loop for slim_bindings (registers it on both the core and
+    # slimrpc namespaces)
+    slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
 
     # Initialize slim_bindings service
     tracing_config = slim_bindings.new_tracing_config()
@@ -299,7 +301,17 @@ The `slima2a` package provides convenient helper functions to simplify SLIM setu
 
 Exactly one of `secret` or `identity` is required; there is no default secret. Missing or conflicting options raise `ValueError` before any connection is opened. See the [README](https://github.com/agntcy/slim-a2a-python#identity-and-node-connection) for a JWT identity with a TLS connection.
 
-The server's `DefaultCallContextBuilder` sets the caller to `UnauthenticatedUser`: in `slim-bindings` 2.x the slimrpc server `Context` exposes only the session id, deadline and caller-supplied metadata, not the caller's verified identity. Metadata is set by the caller and is not used as identity.
+### Caller Identity
+
+The server's `DefaultCallContextBuilder` gives handlers the caller's verified identity as a `slima2a.SlimUser`, built from the slimrpc `Context.peer_subject()` and `peer_issuer()`: the `sub` and `iss` of the token the caller's app set up the MLS session with. When the session has no verified subject, the caller is `UnauthenticatedUser`. In a group session the subject is the MLS sender of the request. Caller-supplied metadata is never used as identity.
+
+```python
+from slima2a import SlimUser
+
+user = context.call_context.user  # in AgentExecutor.execute
+if isinstance(user, SlimUser):
+    print(user.subject, user.issuer)
+```
 
 ### Logging
 

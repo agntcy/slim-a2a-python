@@ -8,7 +8,7 @@ identities for authentication and addressing.
 
 ## Requirements
 
-- `slim-bindings` 2.x
+- `slim-bindings` 3.3.x (3.3.2 or later)
 - `a2a-sdk` 1.1.x
 
 Both A2A protocol versions are supported: v1.0 (`slima2a.types.v1`, the default)
@@ -16,7 +16,7 @@ and v0.3 (`slima2a.types.v0`, via the compatibility layer in `slima2a.compat.v3_
 
 ## Compile the protobuf
 
-- Refer to this [documentation](https://docs.agntcy.org/slim/slim-slimrpc-compiler/) to download the correct slirpc compiler for your system (2.x, matching `slim-bindings` 2.x) and make sure to have in in $PATH.
+- Refer to this [documentation](https://docs.agntcy.org/slim/slim-slimrpc-compiler/) to download the slimrpc compiler for your system (`agntcy-protoc-slimrpc-plugin` 3.x, matching `slim-bindings` 3.x) and make sure to have it in $PATH.
 - Install [bufbuild](https://buf.build/docs/cli/installation/)
 
 Run the following from the repo root:
@@ -91,9 +91,9 @@ from a2a.server.tasks import InMemoryTaskStore
 from slima2a.handler import SRPCHandler
 from slima2a.types.v1.a2a_pb2_slimrpc import add_A2AServiceServicer_to_server
 
-# Set the event loop for slim_bindings. Call the top-level wrapper: as of
-# slim-bindings 2.0 slimrpc lives in its own UniFFI namespace and the loop has
-# to be registered on both, which the wrapper takes care of.
+# Set the event loop for slim_bindings. Call the top-level wrapper: slimrpc
+# lives in its own UniFFI namespace and the loop has to be registered on both,
+# which the wrapper takes care of.
 slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
 
 # Initialize slim_bindings service
@@ -260,9 +260,9 @@ from slima2a.client_transport import (
     slimrpc_channel_factory,
 )
 
-# Set the event loop for slim_bindings. Call the top-level wrapper: as of
-# slim-bindings 2.0 slimrpc lives in its own UniFFI namespace and the loop has
-# to be registered on both, which the wrapper takes care of.
+# Set the event loop for slim_bindings. Call the top-level wrapper: slimrpc
+# lives in its own UniFFI namespace and the loop has to be registered on both,
+# which the wrapper takes care of.
 slim_bindings.uniffi_set_event_loop(asyncio.get_running_loop())
 
 # Initialize slim_bindings service
@@ -465,13 +465,33 @@ identity setup end to end with an in-memory key.
 
 ### Caller identity on the server
 
-`SRPCHandler`'s `DefaultCallContextBuilder` sets the caller to
-`UnauthenticatedUser`. The slimrpc server `Context` in `slim-bindings` 2.x
-exposes no source name or verified identity for the caller, only the session
-id, deadline and caller-supplied metadata. SLIM still verifies the peer's
-identity before a request reaches the handler, but the handler cannot see who
-the peer is. Metadata is set by the caller and is not used as identity.
-Exposing the verified subject/issuer depends on a bindings upgrade.
+SLIM verifies the caller's identity before a request reaches the handler.
+`DefaultCallContextBuilder` (in both `SRPCHandler` and `SRPCCompatHandler`)
+hands it to the handler as a `slima2a.SlimUser`, built from the slimrpc
+`Context.peer_subject()` and `peer_issuer()`: the `sub` and `iss` of the token
+the caller's app set up the MLS session with, as checked by your verifier.
+When the session carries no verified subject, the caller is
+`UnauthenticatedUser`. In a group session the subject is the MLS sender of the
+request. Caller-supplied metadata is never used as identity.
+
+Read it in an `AgentExecutor` (or anywhere the `ServerCallContext` is
+available):
+
+```python
+from slima2a import SlimUser
+
+
+class MyExecutor(AgentExecutor):
+    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        user = context.call_context.user
+        if not isinstance(user, SlimUser):
+            raise PermissionError("unauthenticated caller")
+        print(user.subject, user.issuer)  # e.g. "agntcy/demo/client", "my-issuer"
+```
+
+`user.user_name` is the subject. The raw slimrpc `Context` stays available as
+`call_context.state["slim_context"]`. For a different policy, pass your own
+`CallContextBuilder` as `context_builder`.
 
 ## Helper Functions
 
