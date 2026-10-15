@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/agntcy/slim-a2a-python/compare/v0.8.0...v0.9.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* upgrade to slim-bindings 3.3 and expose the verified caller identity ([#40](https://github.com/agntcy/slim-a2a-python/issues/40))
+
+### Features
+
+* upgrade to slim-bindings 3.3 and expose the verified caller identity ([#40](https://github.com/agntcy/slim-a2a-python/issues/40)) ([bb44468](https://github.com/agntcy/slim-a2a-python/commit/bb44468d00bc8fd1d4eee3bf6e4853d4d66a7291))
+
 ## [0.8.0](https://github.com/agntcy/slim-a2a-python/compare/v0.7.1...v0.8.0) (2026-10-13)
 
 
