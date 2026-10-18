@@ -8,7 +8,7 @@ identities for authentication and addressing.
 
 ## Requirements
 
-- `slim-bindings` 3.3.x (3.3.3 or later)
+- `slim-bindings` 3.3.x (3.3.4 or later)
 - `a2a-sdk` 1.1.x
 
 Both A2A protocol versions are supported: v1.0 (`slima2a.types.v1`, the default)

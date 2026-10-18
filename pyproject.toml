@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.10, <4.0"
 dependencies = [
     "a2a-sdk[telemetry,sqlite]==1.1.0",
-    "slim-bindings>=3.3.3,<4",
+    "slim-bindings>=3.3.4,<4",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
