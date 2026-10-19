@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/agntcy/slim-a2a-python/compare/v0.9.1...v0.9.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* **deps:** upgrade to slim-bindings 3.3.6 ([#45](https://github.com/agntcy/slim-a2a-python/issues/45)) ([03b84c3](https://github.com/agntcy/slim-a2a-python/commit/03b84c345525d7beee82f18792a30d951e3d3629))
+
 ## [0.9.1](https://github.com/agntcy/slim-a2a-python/compare/v0.9.0...v0.9.1) (2026-10-16)
 
 
