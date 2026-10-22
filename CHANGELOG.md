@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/agntcy/slim-a2a-python/compare/v0.9.2...v0.9.3) (2026-10-22)
+
+
+### Bug Fixes
+
+* bump a2a sdk to latest version ([#49](https://github.com/agntcy/slim-a2a-python/issues/49)) ([37f64b9](https://github.com/agntcy/slim-a2a-python/commit/37f64b98d9a9811bf981ca50d2c730ee047e3a76))
+
 ## [0.9.2](https://github.com/agntcy/slim-a2a-python/compare/v0.9.1...v0.9.2) (2026-10-19)
 
 
