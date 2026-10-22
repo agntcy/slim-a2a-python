@@ -214,7 +214,8 @@ def loop() -> Iterator[asyncio.AbstractEventLoop]:
     pending = asyncio.all_tasks(loop)
     for task in pending:
         task.cancel()
-    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+    if pending:
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
 
