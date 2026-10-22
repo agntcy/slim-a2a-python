@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/agntcy/slim-a2a-python/compare/v0.9.2...v0.9.3) (2026-10-22)
+
+
+### Bug Fixes
+
+* trigger release please PR ([#50](https://github.com/agntcy/slim-a2a-python/issues/50)) ([4057e31](https://github.com/agntcy/slim-a2a-python/commit/4057e318232ace093bcfa1c58e96a9ae26d48b35))
+
 ## [0.9.2](https://github.com/agntcy/slim-a2a-python/compare/v0.9.1...v0.9.2) (2026-10-19)
 
 
