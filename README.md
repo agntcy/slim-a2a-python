@@ -21,7 +21,7 @@ and v0.3 (`slima2a.types.v0`, via the compatibility layer in `slima2a.compat.v3_
 
 Run the following from the repo root:
 
-```sh
+```bash
 task generate
 ```
 
